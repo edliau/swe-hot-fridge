@@ -1,0 +1,22 @@
+{
+  "name": "hot-fridge-ecommerce",
+  "version": "1.0.0",
+  "description": "E-grocery platform for Hot Fridge",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm run dev -- --open",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "keywords": [
+    "ecommerce",
+    "grocery"
+  ],
+  "author": "Your Team",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
