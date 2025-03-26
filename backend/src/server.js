@@ -9,6 +9,10 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const morgan = require('morgan');
 const path = require('path');
+const errorHandler = require('./middleware/error');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 
 // Load environment variables
 dotenv.config();
@@ -55,7 +59,8 @@ if (process.env.NODE_ENV === 'development') {
 
 // Mount routes
 app.use('/api/products', productRoutes);
-// We'll add more routes later
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Base route
 app.get('/', (req, res) => {
@@ -73,15 +78,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Error handler middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || 'Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : {}
-  });
-});
+app.use(errorHandler);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
