@@ -4,12 +4,14 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
-    required: [true, 'Please add a name'],
-    trim: true,
-    maxlength: [50, 'Name cannot be more than 50 characters']
+    required: [true, 'Please add a first name']
   },
+  lastName: {
+    type: String,
+    required: [true, 'Please add a last name']
+  },  
   email: {
     type: String,
     required: [true, 'Please add an email'],
@@ -39,36 +41,14 @@ const userSchema = new mongoose.Schema({
   },
   addresses: [
     {
-      addressLine1: {
-        type: String,
-        required: true
-      },
-      addressLine2: {
-        type: String
-      },
-      city: {
-        type: String,
-        required: true
-      },
-      state: {
-        type: String
-      },
-      postalCode: {
-        type: String,
-        required: true
-      },
-      country: {
-        type: String,
-        required: true,
-        default: 'Singapore'
-      },
-      isDefault: {
-        type: Boolean,
-        default: false
-      },
-      deliveryInstructions: {
-        type: String
-      }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Address'
+    }
+  ],
+  paymentMethods: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PaymentMethod'
     }
   ],
   dietaryPreferences: {

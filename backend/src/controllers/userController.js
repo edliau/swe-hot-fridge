@@ -393,10 +393,10 @@ exports.deletePaymentMethod = asyncHandler(async (req, res, next) => {
 exports.setDietaryPreferences = asyncHandler(async (req, res, next) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
-    { dietaryPreferences: req.body },
+    { dietaryPreferences: req.body.dietaryPreferences },
     { new: true, runValidators: true }
   );
-  
+
   res.status(200).json({
     success: true,
     data: user.dietaryPreferences
