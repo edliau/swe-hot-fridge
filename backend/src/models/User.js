@@ -1,3 +1,4 @@
+// models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -6,20 +7,24 @@ const crypto = require('crypto');
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'Please add a first name']
+    required: [true, 'Please add a first name'],
+    trim: true
   },
   lastName: {
     type: String,
-    required: [true, 'Please add a last name']
+    required: [true, 'Please add a last name'],
+    trim: true
   },  
   email: {
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
     match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
-    ]
+    ],
+    lowercase: true,
+    trim: true
   },
   phone: {
     type: String,
@@ -39,6 +44,16 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'admin'],
     default: 'customer'
   },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  verificationExpire: Date,
   addresses: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -76,24 +91,62 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  stripeCustomerId: {
+    type: String,
+    select: false
+  },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  lastLogin: {
+    type: Date,
+    default: Date.now
+  },
+  loginAttempts: {
+    type: Number,
+    default: 0
+  },
+  lockedUntil: Date,
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  // Add this to the User schema in models/User.js
+cart: {
+  items: [
+    {
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1
+      },
+      selected: {
+        type: Boolean,
+        default: true
+      }
+    }
+  ]
+},
 });
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {
   // Only run if password is modified
   if (!this.isModified('password')) {
-    next();
+    return next();
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Sign JWT and return
@@ -127,29 +180,45 @@ userSchema.methods.getResetPasswordToken = function() {
   return resetToken;
 };
 
-// Ensure only one default address
-userSchema.pre('save', function(next) {
-  if (this.isModified('addresses')) {
-    let hasDefault = false;
+// Generate email verification token
+userSchema.methods.getEmailVerificationToken = function() {
+  // Generate token
+  const verificationToken = crypto.randomBytes(20).toString('hex');
 
-    // First pass: check if there's any default address
-    for (let i = 0; i < this.addresses.length; i++) {
-      if (this.addresses[i].isDefault) {
-        // If we already found a default, set this one to false
-        if (hasDefault) {
-          this.addresses[i].isDefault = false;
-        } else {
-          hasDefault = true;
-        }
-      }
-    }
+  // Hash token and set to verificationToken field
+  this.verificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
 
-    // If no default address is found and we have addresses, set the first one as default
-    if (!hasDefault && this.addresses.length > 0) {
-      this.addresses[0].isDefault = true;
-    }
+  // Set expiration (24 hours)
+  this.verificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+
+  return verificationToken;
+};
+
+// Increment login attempts
+userSchema.methods.incrementLoginAttempts = async function() {
+  // Increment login attempts
+  this.loginAttempts += 1;
+  
+  // If login attempts reach 5, lock account for 15 minutes
+  if (this.loginAttempts >= 5) {
+    this.lockedUntil = Date.now() + 15 * 60 * 1000; // 15 minutes
   }
-  next();
-});
+  
+  await this.save();
+  
+  return this.loginAttempts;
+};
+
+// Reset login attempts
+userSchema.methods.resetLoginAttempts = async function() {
+  this.loginAttempts = 0;
+  this.lockedUntil = undefined;
+  this.lastLogin = Date.now();
+  
+  await this.save();
+};
 
 module.exports = mongoose.model('User', userSchema);

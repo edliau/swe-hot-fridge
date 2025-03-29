@@ -1,56 +1,32 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
-const xss = require('xss-clean');
-const rateLimit = require('express-rate-limit');
-const hpp = require('hpp');
 const morgan = require('morgan');
 const path = require('path');
+const setupSecurity = require('./middleware/securityMiddleware');
 const errorHandler = require('./middleware/error');
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-
 
 // Load environment variables
 dotenv.config();
 
 // Import route files
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
-// We'll add more routes later
+const cartRoutes = require('./routes/cartRoutes');
 
 // Initialize express app
 const app = express();
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 
 // Cookie parser
 app.use(cookieParser());
 
-// Enable CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
-
-// Security headers
-app.use(helmet());
-
-// Prevent XSS attacks
-app.use(xss());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100 // 100 requests per windowMs
-});
-app.use('/api', limiter);
-
-// Prevent HTTP param pollution
-app.use(hpp());
+// Set up all security middleware
+setupSecurity(app);
 
 // Logging middleware in development
 if (process.env.NODE_ENV === 'development') {
@@ -58,9 +34,10 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Mount routes
-app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
 
 // Base route
 app.get('/', (req, res) => {
@@ -80,14 +57,41 @@ if (process.env.NODE_ENV === 'production') {
 // Error handler middleware
 app.use(errorHandler);
 
-// Connect to MongoDB
+// Handle unhandled routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Cannot find ${req.originalUrl} on this server`
+  });
+});
+
+// Connect to MongoDB with improved options
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  autoIndex: true // Needed for unique constraints and indexes
 })
 .then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+
+// Global error handler for unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.error(`Error: ${err.message}`);
+  // Close server & exit process
+  process.exit(1);
+});
 
 // Start the server
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, () => 
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
+);
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error(`Server error: ${error.message}`);
+  process.exit(1);
+});
