@@ -1,29 +1,29 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const ErrorResponse = require('../utils/errorResponse');
+const asyncHandler = require('../middleware/async');
 
-// Protect routes - middleware to verify JWT token
-exports.protect = async (req, res, next) => {
+// Middleware to protect routes - requires JWT authentication
+exports.protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  // Check if token exists in headers
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    // Get token from header (format: "Bearer token")
+  // Check for token in headers or cookies
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
-  } 
-  // Check if token exists in cookie
-  else if (req.cookies.token) {
+  } else if (req.cookies.token) {
     token = req.cookies.token;
   }
 
-  // Check if token exists
+  // If no token, check if this is a guest request
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized to access this route'
-    });
+    // If guestId exists, attach it to the request and continue
+    if (req.cookies.guestId) {
+      req.isGuest = true;
+      req.guestId = req.cookies.guestId;
+      return next();
+    }
+    
+    return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 
   try {
@@ -32,49 +32,44 @@ exports.protect = async (req, res, next) => {
     
     // Attach user to request object
     req.user = await User.findById(decoded.id);
+    req.isGuest = false;
     
     // Check if user still exists
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User no longer exists'
-      });
+      return next(new ErrorResponse('User no longer exists', 401));
+    }
+    
+    // Check if user is active
+    if (!req.user.isActive) {
+      return next(new ErrorResponse('Your account has been deactivated', 401));
     }
     
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized to access this route'
-    });
+    return next(new ErrorResponse('Not authorized to access this route', 401));
   }
-};
+});
 
-// Authorize by role - middleware to check user role
+// Middleware to authorize by role
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route'
-      });
+    // Guests can't access role-restricted routes
+    if (req.isGuest) {
+      return next(new ErrorResponse('Guest users cannot access this resource', 403));
     }
     
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: `User role '${req.user.role}' is not authorized to access this route`
-      });
+    if (!req.user || !roles.includes(req.user.role)) {
+      return next(new ErrorResponse(`User role '${req.user?.role || 'undefined'}' is not authorized to access this route`, 403));
     }
     
     next();
   };
 };
 
-// Guest user middleware - creates a guest session if no user is logged in
-exports.guestSession = (req, res, next) => {
-  // If already authenticated, skip
-  if (req.user) {
+// Guest session middleware - creates or attaches a guest session
+exports.guestSession = asyncHandler(async (req, res, next) => {
+  // If already authenticated as a user, skip
+  if (req.headers.authorization || req.cookies.token) {
     return next();
   }
   
@@ -88,13 +83,16 @@ exports.guestSession = (req, res, next) => {
     res.cookie('guestId', guestId, {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production'
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
     });
     
     req.guestId = guestId;
+    req.isGuest = true;
   } else {
     req.guestId = req.cookies.guestId;
+    req.isGuest = true;
   }
   
   next();
-};
+});
