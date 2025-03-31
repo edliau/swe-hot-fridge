@@ -1,6 +1,7 @@
 // routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
+
 const {
   addAddress,
   getAddresses,
@@ -15,6 +16,7 @@ const {
   removeFromFavorites,
   getFavorites
 } = require('../controllers/userController');
+
 const { protect } = require('../middleware/authMiddleware');
 
 const {
@@ -24,6 +26,11 @@ const {
   validateProductIdParam,
   handleValidationErrors
 } = require('../middleware/validators/userValidator');
+
+const {
+  validateCreatePaymentMethod,
+  validateUpdatePaymentMethod
+} = require('../middleware/validators/paymentMethodValidator');
 
 // Protect all routes
 router.use(protect);
@@ -37,13 +44,13 @@ router.route('/address/:id')
   .put(validateUpdateAddress, handleValidationErrors, updateAddress)
   .delete(deleteAddress);
 
-// Payment method routes
+// Payment method routes (still under user scope)
 router.route('/payment')
-  .post(addPaymentMethod)
+  .post(validateCreatePaymentMethod, handleValidationErrors, addPaymentMethod)
   .get(getPaymentMethods);
 
 router.route('/payment/:id')
-  .put(updatePaymentMethod)
+  .put(validateUpdatePaymentMethod, handleValidationErrors, updatePaymentMethod)
   .delete(deletePaymentMethod);
 
 // Dietary preferences route
