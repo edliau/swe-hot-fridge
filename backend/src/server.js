@@ -15,7 +15,7 @@ const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const shoppingListRoutes = require('./routes/shoppingListRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
-
+const promotionRoutes = require('./routes/promotionRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +67,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/shopping-lists', shoppingListRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // Base route
 app.get('/', (req, res) => {
