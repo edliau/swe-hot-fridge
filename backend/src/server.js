@@ -14,6 +14,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const shoppingListRoutes = require('./routes/shoppingListRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 
 // Load environment variables
@@ -65,6 +66,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/shopping-lists', shoppingListRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Base route
 app.get('/', (req, res) => {
