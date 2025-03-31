@@ -1,51 +1,66 @@
-const { body, param, validationResult } = require('express-validator');
+const { body, param, validationResult } = require("express-validator");
 
 // Validate creating a payment method
 exports.validateCreatePaymentMethod = [
-  body('paymentMethodId')
-    .notEmpty().withMessage('Payment method ID is required')
-    .isString().withMessage('Payment method ID must be a string'),
+  body("paymentMethodId")
+    .notEmpty()
+    .withMessage("Payment method ID is required")
+    .isString()
+    .withMessage("Payment method ID must be a string"),
 
-  body('isDefault')
+  body("isDefault")
     .optional()
-    .isBoolean().withMessage('isDefault must be true or false'),
+    .isBoolean()
+    .withMessage("isDefault must be true or false"),
 
-  body('billingDetails').optional().isObject().withMessage('Billing details must be an object'),
-
-  body('billingDetails.name')
+  body("billingDetails")
     .optional()
-    .isString().withMessage('Cardholder name must be a string'),
+    .isObject()
+    .withMessage("Billing details must be an object"),
 
-  body('billingDetails.address.line1')
+  body("billingDetails.name")
     .optional()
-    .isString().withMessage('Address line1 must be a string'),
+    .isString()
+    .withMessage("Cardholder name must be a string"),
 
-  body('billingDetails.address.line2')
+  body("billingDetails.address.line1")
     .optional()
-    .isString().withMessage('Address line2 must be a string'),
+    .isString()
+    .withMessage("Address line1 must be a string"),
 
-  body('billingDetails.address.city')
+  body("billingDetails.address.line2")
     .optional()
-    .isString().withMessage('City must be a string'),
+    .isString()
+    .withMessage("Address line2 must be a string"),
 
-  body('billingDetails.address.state')
+  body("billingDetails.address.city")
     .optional()
-    .isString().withMessage('State must be a string'),
+    .isString()
+    .withMessage("City must be a string"),
 
-  body('billingDetails.address.postal_code')
+  body("billingDetails.address.state")
     .optional()
-    .isString().withMessage('Postal code must be a string'),
+    .isString()
+    .withMessage("State must be a string"),
 
-  body('billingDetails.address.country')
+  body("billingDetails.address.postal_code")
     .optional()
-    .isString().withMessage('Country must be a string'),
+    .isString()
+    .withMessage("Postal code must be a string"),
+
+  body("billingDetails.address.country")
+    .optional()
+    .isString()
+    .withMessage("Country must be a string"),
 ];
 
 // Validate updating a payment method
 exports.validateUpdatePaymentMethod = [
-  body('isDefault')
-    .notEmpty().withMessage('isDefault is required')
-    .isBoolean().withMessage('isDefault must be true or false')
+  body("isDefault")
+    .notEmpty()
+    .withMessage("isDefault is required")
+    .isBoolean()
+    .withMessage("isDefault must be true or false"),
 ];
 
 // Middleware to handle validation errors
