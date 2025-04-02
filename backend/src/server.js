@@ -10,19 +10,24 @@ const hpp = require("hpp");
 const morgan = require("morgan");
 const path = require("path");
 const errorHandler = require("./middleware/error");
+
+// Import route files
+const addressRoutes = require("./routes/addressRoutes");
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
+const cartItemRoutes = require("./routes/cartItemRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
-const shoppingListRoutes = require("./routes/shoppingListRoutes");
-const reviewRoutes = require("./routes/reviewRoutes");
+const orderItemRoutes = require("./routes/orderItemRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const productRoutes = require("./routes/productRoutes");
 const promotionRoutes = require("./routes/promotionRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const shoppingCartRoutes = require("./routes/shoppingCartRoutes");
+const shoppingListRoutes = require("./routes/shoppingListRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 // Load environment variables
 dotenv.config();
-
-// Import route files
-const productRoutes = require("./routes/productRoutes");
-// We'll add more routes later
 
 // Initialize express app
 const app = express();

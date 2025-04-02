@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const cartItemSchema = require("./CartItem");
 
 const shoppingCartSchema = new mongoose.Schema({
   userId: {
@@ -6,7 +7,13 @@ const shoppingCartSchema = new mongoose.Schema({
     ref: "User", // Reference to User model
     required: true,
   },
-  items: [cartItemSchema], // Array of CartItem objects
+  items: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "cartItem", // Reference to CartItem schema
+      required: true,
+    },
+  ], // Array of CartItem objects
   totalAmount: {
     type: Number,
     default: 0,
