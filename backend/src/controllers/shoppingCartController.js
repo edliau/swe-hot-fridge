@@ -1,4 +1,4 @@
-const ShoppingCart = require("../models/shoppingCart");
+const ShoppingCart = require("../models/ShoppingCart");
 const Order = require("../models/Order");
 
 // Get user's shopping cart

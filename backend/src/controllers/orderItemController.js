@@ -1,4 +1,4 @@
-const OrderItem = require("../models/orderItem");
+const OrderItem = require("../models/OrderItem");
 const Product = require("../models/Product");
 
 // Add an order item

@@ -1,7 +1,7 @@
 // controllers/shoppingListController.js
-const ShoppingList = require('../models/shoppingList');
-const ErrorResponse = require('../utils/errorResponse');
-const asyncHandler = require('../middleware/async');
+const ShoppingList = require("../models/ShoppingList");
+const ErrorResponse = require("../utils/errorResponse");
+const asyncHandler = require("../middleware/async");
 
 // @desc    Create a shopping list
 // @route   POST /api/shopping-lists
@@ -26,14 +26,14 @@ exports.getShoppingLists = asyncHandler(async (req, res, next) => {
 exports.updateShoppingList = asyncHandler(async (req, res, next) => {
   let list = await ShoppingList.findById(req.params.id);
 
-  if (!list) return next(new ErrorResponse('Shopping list not found', 404));
+  if (!list) return next(new ErrorResponse("Shopping list not found", 404));
   if (list.userId.toString() !== req.user.id) {
-    return next(new ErrorResponse('Not authorized', 401));
+    return next(new ErrorResponse("Not authorized", 401));
   }
 
   list = await ShoppingList.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
-    runValidators: true
+    runValidators: true,
   });
 
   res.status(200).json({ success: true, data: list });
@@ -45,9 +45,9 @@ exports.updateShoppingList = asyncHandler(async (req, res, next) => {
 exports.deleteShoppingList = asyncHandler(async (req, res, next) => {
   const list = await ShoppingList.findById(req.params.id);
 
-  if (!list) return next(new ErrorResponse('Shopping list not found', 404));
+  if (!list) return next(new ErrorResponse("Shopping list not found", 404));
   if (list.userId.toString() !== req.user.id) {
-    return next(new ErrorResponse('Not authorized', 401));
+    return next(new ErrorResponse("Not authorized", 401));
   }
 
   await list.deleteOne();
