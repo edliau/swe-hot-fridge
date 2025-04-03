@@ -1,93 +1,93 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'Please add a first name']
+    required: [true, "Please add a first name"],
   },
   lastName: {
     type: String,
-    required: [true, 'Please add a last name']
-  },  
+    required: [true, "Please add a last name"],
+  },
   email: {
     type: String,
-    required: [true, 'Please add an email'],
+    required: [true, "Please add an email"],
     unique: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
-    ]
+      "Please add a valid email",
+    ],
   },
   phone: {
     type: String,
     match: [
       /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/,
-      'Please add a valid phone number'
-    ]
+      "Please add a valid phone number",
+    ],
   },
   password: {
     type: String,
-    required: [true, 'Please add a password'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't return password by default
+    required: [true, "Please add a password"],
+    minlength: [6, "Password must be at least 6 characters"],
+    select: false, // Don't return password by default
   },
   role: {
     type: String,
-    enum: ['customer', 'admin'],
-    default: 'customer'
+    enum: ["customer", "admin"],
+    default: "customer",
   },
   addresses: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Address'
-    }
+      ref: "Address",
+    },
   ],
   paymentMethods: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'PaymentMethod'
-    }
+      ref: "PaymentMethod",
+    },
   ],
   dietaryPreferences: {
     type: [String],
     enum: [
-      'vegetarian',
-      'vegan',
-      'gluten-free',
-      'dairy-free',
-      'keto',
-      'paleo',
-      'halal',
-      'kosher',
-      'sugar-free',
-      'nut-free'
-    ]
+      "vegetarian",
+      "vegan",
+      "gluten-free",
+      "dairy-free",
+      "keto",
+      "paleo",
+      "halal",
+      "kosher",
+      "sugar-free",
+      "nut-free",
+    ],
   },
   favoriteItems: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product'
-    }
+      ref: "Product",
+    },
   ],
   loyaltyPoints: {
     type: Number,
-    default: 0
+    default: 0,
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
+userSchema.pre("save", async function (next) {
   // Only run if password is modified
-  if (!this.isModified('password')) {
+  if (!this.isModified("password")) {
     next();
   }
 
@@ -97,29 +97,27 @@ userSchema.pre('save', async function(next) {
 });
 
 // Sign JWT and return
-userSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign(
-    { id: this._id, role: this.role }, 
-    process.env.JWT_SECRET, 
-    { expiresIn: process.env.JWT_EXPIRE }
-  );
+userSchema.methods.getSignedJwtToken = function () {
+  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
 };
 
 // Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Generate and hash password reset token
-userSchema.methods.getResetPasswordToken = function() {
+userSchema.methods.getResetPasswordToken = function () {
   // Generate token
-  const resetToken = crypto.randomBytes(20).toString('hex');
+  const resetToken = crypto.randomBytes(20).toString("hex");
 
   // Hash token and set to resetPasswordToken field
   this.resetPasswordToken = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(resetToken)
-    .digest('hex');
+    .digest("hex");
 
   // Set expiration (10 minutes)
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
@@ -128,8 +126,8 @@ userSchema.methods.getResetPasswordToken = function() {
 };
 
 // Ensure only one default address
-userSchema.pre('save', function(next) {
-  if (this.isModified('addresses')) {
+userSchema.pre("save", function (next) {
+  if (this.isModified("addresses")) {
     let hasDefault = false;
 
     // First pass: check if there's any default address
@@ -152,4 +150,4 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

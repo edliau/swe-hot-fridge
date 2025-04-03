@@ -41,14 +41,14 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 
   // Check if user is active
-  if (!user.isActive) {
-    return next(
-      new ErrorResponse(
-        "Your account has been deactivated, please contact support",
-        401
-      )
-    );
-  }
+  // if (!user.isActive) {
+  //   return next(
+  //     new ErrorResponse(
+  //       "Your account has been deactivated, please contact support",
+  //       401
+  //     )
+  //   );
+  // }
 
   // Check if password matches
   const isMatch = await user.matchPassword(password);
