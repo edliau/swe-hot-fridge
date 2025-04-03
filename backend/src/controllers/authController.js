@@ -9,6 +9,69 @@ const asyncHandler = require('../middleware/async');
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res, next) => {
+  const { firstName, lastName, email, password, role } = req.body;
+
+  // Check if email already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return next(new ErrorResponse('Email already in use', 400));
+  }
+
+  // Create user with role if provided (and authorized)
+  // Check if the request is coming from an admin user who can set roles
+  const userRole = req.user && req.user.role === 'admin' ? role || 'user' : 'user';
+  
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    password,
+    role: userRole
+  });
+
+  // Generate verification token
+  if (process.env.EMAIL_VERIFICATION === 'true') {
+    const verificationToken = user.getEmailVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Create verification URL
+    const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
+
+    const message = `You are receiving this email because you need to confirm your email address. Please make a GET request to: \n\n ${verificationUrl}`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Email Verification',
+        message
+      });
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Verification email sent' 
+      });
+    } catch (err) {
+      user.verificationToken = undefined;
+      user.verificationExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return next(new ErrorResponse('Email could not be sent', 500));
+    }
+  } else {
+    // If email verification is disabled, set user as verified
+    user.emailVerified = true;
+    await user.save({ validateBeforeSave: false });
+    
+    // Send token response
+    sendTokenResponse(user, 201, res);
+  }
+});
+
+// @desc    Register admin user
+// @route   POST /api/auth/register-admin
+// @access  Private/Admin
+exports.registerAdmin = asyncHandler(async (req, res, next) => {
+  // Only admins can access this route (middleware will handle this)
   const { firstName, lastName, email, password } = req.body;
 
   // Check if email already exists
@@ -17,15 +80,16 @@ exports.register = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Email already in use', 400));
   }
 
-  // Create user
+  // Create admin user
   const user = await User.create({
     firstName,
     lastName,
     email,
-    password
+    password,
+    role: 'admin'
   });
 
-  // Generate verification token
+  // If email verification is enabled, handle that
   if (process.env.EMAIL_VERIFICATION === 'true') {
     const verificationToken = user.getEmailVerificationToken();
     await user.save({ validateBeforeSave: false });
@@ -88,9 +152,9 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 
   // Check if user is active
-  if (!user.isActive) {
-    return next(new ErrorResponse('Your account has been deactivated, please contact support', 401));
-  }
+  //if (!user.isActive) {
+  //  return next(new ErrorResponse('Your account has been deactivated, please contact support', 401));
+  //}
 
   // Check if email is verified
   if (process.env.EMAIL_VERIFICATION === 'true' && !user.emailVerified) {
