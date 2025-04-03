@@ -25,10 +25,10 @@ router.delete(
   cartItemController.removeItem // Remove item from the cart
 );
 
-router.put(
-  "/:id/calculate-total",
-  protect, // This ensures the user is authenticated
-  cartItemController.calculateTotal // Calculate the total for the cart item
-);
+// router.put(
+//   "/:id/calculate-total",
+//   protect, // This ensures the user is authenticated
+//   cartItemController.calculateTotal // Calculate the total for the cart item
+// );
 
 module.exports = router;

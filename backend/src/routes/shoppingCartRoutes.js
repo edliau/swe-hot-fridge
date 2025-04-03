@@ -3,24 +3,24 @@ const router = express.Router();
 const shoppingCartController = require("../controllers/shoppingCartController");
 
 // Get user's shopping cart
-router.get("/cart", shoppingCartController.getCart);
+router.get("/", shoppingCartController.getCart);
 
 // Add item to cart
-router.post("/cart", shoppingCartController.addItemToCart);
+router.post("/", shoppingCartController.addItemToCart);
 
 // Remove item from cart
-router.delete("/cart/:productId", shoppingCartController.removeItemFromCart);
+router.delete("/:productId", shoppingCartController.removeItemFromCart);
 
 // Clear cart
-router.delete("/cart/clear", shoppingCartController.clearCart);
+router.delete("/clear", shoppingCartController.clearCart);
 
 // Update item quantity in cart
-router.put("/cart/:productId", shoppingCartController.updateCartItem);
+router.put("/:productId", shoppingCartController.updateCartItem);
 
 // Get total cart amount
-router.get("/cart/total", shoppingCartController.getTotal);
+router.get("/total", shoppingCartController.getTotal);
 
 // Convert cart to order
-router.post("/cart/convert", shoppingCartController.convertToOrder);
+router.post("/convert", shoppingCartController.convertToOrder);
 
 module.exports = router;
