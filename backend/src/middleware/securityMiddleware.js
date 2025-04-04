@@ -20,11 +20,34 @@ const setupSecurity = (app) => {
   // Prevent HTTP Parameter Pollution
   app.use(hpp());
 
-  // Set up CORS - Access-Control-Allow-Origin
-  app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true
-  }));
+  // Set up CORS with more flexible configuration
+  const corsOptions = {
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl requests)
+      if (!origin) return callback(null, true);
+      
+      // List of allowed origins
+      const allowedOrigins = [
+        process.env.CLIENT_URL || 'http://localhost:5173', // Vite default dev port
+        'http://localhost:5173',
+        'http://localhost:4173',  // Vite preview port
+        'http://localhost:3000'   // Another common development port
+      ];
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  };
+
+  // Use this configuration
+  app.use(cors(corsOptions));
+
 
   // Rate limiting
   const apiLimiter = rateLimit({
