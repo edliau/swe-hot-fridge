@@ -13,16 +13,13 @@ dotenv.config();
 // Import route files
 const addressRoutes = require("./routes/addressRoutes");
 const authRoutes = require("./routes/authRoutes");
-const cartItemRoutes = require("./routes/cartItemRoutes");
+const cartRoutes = require("./routes/cartRoutes"); // Unified cart routes
 const categoryRoutes = require("./routes/categoryRoutes");
-// const guestCartRoutes = require("./routes/guestCartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
-const orderItemRoutes = require("./routes/orderItemRoutes");
 const productRoutes = require("./routes/productRoutes");
 const promotionRoutes = require("./routes/promotionRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
-const shoppingCartRoutes = require("./routes/shoppingCartRoutes");
 const shoppingListRoutes = require("./routes/shoppingListRoutes");
 const userRoutes = require("./routes/userRoutes");
 
@@ -44,18 +41,16 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // Mount routes
-app.use("/api/address", addressRoutes);
+app.use("/api/addresses", addressRoutes); // Changed from singular to plural for consistency
 app.use("/api/auth", authRoutes);
-app.use("/api/cart-items", cartItemRoutes);
+app.use("/api/cart", cartRoutes); // Unified cart routes
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/order-items", orderItemRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/shopping-cart", shoppingCartRoutes);
-app.use("/api/shopping-list", shoppingListRoutes);
+app.use("/api/shopping-lists", shoppingListRoutes); // Changed from singular to plural for consistency
 app.use("/api/users", userRoutes);
 
 // Base route

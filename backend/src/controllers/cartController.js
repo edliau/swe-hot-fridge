@@ -5,9 +5,11 @@ const Product = require('../models/Product');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
-// @desc    Add item to cart
-// @route   POST /api/cart/items
-// @access  Public (both guest and authenticated users)
+/**
+ * @desc    Add item to cart
+ * @route   POST /api/cart/items
+ * @access  Public (both guest and authenticated users)
+ */
 exports.addToCart = asyncHandler(async (req, res, next) => {
   const { productId, quantity } = req.body;
   
@@ -96,9 +98,11 @@ exports.addToCart = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get cart items
-// @route   GET /api/cart/items
-// @access  Public (both guest and authenticated users)
+/**
+ * @desc    Get cart items
+ * @route   GET /api/cart/items
+ * @access  Public (both guest and authenticated users)
+ */
 exports.getCartItems = asyncHandler(async (req, res, next) => {
   // Handle guest cart
   if (req.isGuest) {
@@ -121,9 +125,11 @@ exports.getCartItems = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Update cart item quantity
-// @route   PUT /api/cart/items/:productId
-// @access  Public (both guest and authenticated users)
+/**
+ * @desc    Update cart item quantity
+ * @route   PUT /api/cart/items/:productId
+ * @access  Public (both guest and authenticated users)
+ */
 exports.updateCartItem = asyncHandler(async (req, res, next) => {
   const { productId } = req.params;
   const { quantity, selected } = req.body;
@@ -211,142 +217,195 @@ exports.updateCartItem = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Remove item from cart
-// @route   DELETE /api/cart/items/:productId
-// @access  Public (both guest and authenticated users)
+/**
+ * @desc    Remove item from cart
+ * @route   DELETE /api/cart/items/:productId
+ * @access  Public (both guest and authenticated users)
+ */
 exports.removeCartItem = asyncHandler(async (req, res, next) => {
-    const { productId } = req.params;
+  const { productId } = req.params;
+  
+  // Handle guest cart
+  if (req.isGuest) {
+    const guestCart = await GuestCart.findOne({ guestId: req.guestId });
     
-    // Handle guest cart
-    if (req.isGuest) {
-      const guestCart = await GuestCart.findOne({ guestId: req.guestId });
-      
-      if (!guestCart) {
-        return next(new ErrorResponse('Cart not found', 404));
-      }
-      
-      // Remove item from cart
-      guestCart.items = guestCart.items.filter(
-        item => item.productId.toString() !== productId
-      );
-      
-      await guestCart.save();
-      
-      return res.status(200).json({
-        success: true,
-        data: guestCart
-      });
-    }
-    
-    // Handle registered user cart
-    const user = await User.findById(req.user.id);
-    
-    if (!user.cart || !user.cart.items) {
+    if (!guestCart) {
       return next(new ErrorResponse('Cart not found', 404));
     }
     
     // Remove item from cart
-    user.cart.items = user.cart.items.filter(
+    guestCart.items = guestCart.items.filter(
       item => item.productId.toString() !== productId
     );
     
-    await user.save();
+    await guestCart.save();
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: user.cart
+      data: guestCart
     });
-  });
+  }
   
-  // @desc    Clear cart
-  // @route   DELETE /api/cart/items
-  // @access  Public (both guest and authenticated users)
-  exports.clearCart = asyncHandler(async (req, res, next) => {
-    // Handle guest cart
-    if (req.isGuest) {
-      await GuestCart.findOneAndDelete({ guestId: req.guestId });
-      
-      return res.status(200).json({
-        success: true,
-        data: {}
-      });
-    }
+  // Handle registered user cart
+  const user = await User.findById(req.user.id);
+  
+  if (!user.cart || !user.cart.items) {
+    return next(new ErrorResponse('Cart not found', 404));
+  }
+  
+  // Remove item from cart
+  user.cart.items = user.cart.items.filter(
+    item => item.productId.toString() !== productId
+  );
+  
+  await user.save();
+  
+  res.status(200).json({
+    success: true,
+    data: user.cart
+  });
+});
+
+/**
+ * @desc    Clear cart
+ * @route   DELETE /api/cart/items
+ * @access  Public (both guest and authenticated users)
+ */
+exports.clearCart = asyncHandler(async (req, res, next) => {
+  // Handle guest cart
+  if (req.isGuest) {
+    await GuestCart.findOneAndDelete({ guestId: req.guestId });
     
-    // Handle registered user cart
-    const user = await User.findById(req.user.id);
-    
-    if (user.cart) {
-      user.cart.items = [];
-      await user.save();
-    }
-    
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {}
     });
-  });
+  }
   
-  // @desc    Transfer guest cart to user after login
-  // @route   POST /api/cart/transfer
-  // @access  Private
-  exports.transferGuestCart = asyncHandler(async (req, res, next) => {
-    if (!req.user) {
-      return next(new ErrorResponse('User must be logged in', 401));
-    }
-    
-    if (!req.body.guestId) {
-      return next(new ErrorResponse('Guest ID is required', 400));
-    }
-    
-    const guestCart = await GuestCart.findOne({ guestId: req.body.guestId });
-    
-    if (!guestCart || !guestCart.items.length) {
-      return res.status(200).json({
-        success: true,
-        message: 'No guest cart found to transfer',
-        data: {}
-      });
-    }
-    
-    // Get user with cart
-    const user = await User.findById(req.user.id);
-    
-    // Initialize cart if it doesn't exist
-    if (!user.cart) {
-      user.cart = { items: [] };
-    }
-    
-    // Merge guest cart items with user cart
-    guestCart.items.forEach(guestItem => {
-      const existingItemIndex = user.cart.items.findIndex(
-        item => item.productId.toString() === guestItem.productId.toString()
-      );
-      
-      if (existingItemIndex > -1) {
-        // Update quantity if product already in cart
-        user.cart.items[existingItemIndex].quantity += guestItem.quantity;
-      } else {
-        // Add new item to cart
-        user.cart.items.push({
-          productId: guestItem.productId,
-          quantity: guestItem.quantity,
-          selected: guestItem.selected
-        });
-      }
-    });
-    
+  // Handle registered user cart
+  const user = await User.findById(req.user.id);
+  
+  if (user.cart) {
+    user.cart.items = [];
     await user.save();
+  }
+  
+  res.status(200).json({
+    success: true,
+    data: {}
+  });
+});
+
+/**
+ * @desc    Get cart total
+ * @route   GET /api/cart/total
+ * @access  Public (both guest and authenticated users)
+ */
+exports.getCartTotal = asyncHandler(async (req, res, next) => {
+  let items = [];
+  let totalAmount = 0;
+  
+  // Handle guest cart
+  if (req.isGuest) {
+    const guestCart = await GuestCart.findOne({ guestId: req.guestId })
+      .populate('items.productId');
     
-    // Delete guest cart
-    await GuestCart.findOneAndDelete({ guestId: req.body.guestId });
-    
-    // Populate product details in response
-    const populatedUser = await User.findById(req.user.id)
+    if (guestCart && guestCart.items.length > 0) {
+      items = guestCart.items;
+    }
+  } else {
+    // Handle registered user cart
+    const user = await User.findById(req.user.id)
       .populate('cart.items.productId');
     
-    res.status(200).json({
-      success: true,
-      message: 'Guest cart transferred successfully',
-      data: populatedUser.cart
-    });
+    if (user.cart && user.cart.items.length > 0) {
+      items = user.cart.items;
+    }
+  }
+  
+  // Calculate total
+  if (items.length > 0) {
+    totalAmount = items.reduce((acc, item) => {
+      const price = item.productId.isOnSale 
+        ? item.productId.discountPrice 
+        : item.productId.price;
+      
+      return acc + (price * item.quantity);
+    }, 0);
+  }
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      totalAmount,
+      itemCount: items.length
+    }
   });
+});
+
+/**
+ * @desc    Transfer guest cart to user after login
+ * @route   POST /api/cart/transfer
+ * @access  Private
+ */
+exports.transferGuestCart = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    return next(new ErrorResponse('User must be logged in', 401));
+  }
+  
+  if (!req.body.guestId) {
+    return next(new ErrorResponse('Guest ID is required', 400));
+  }
+  
+  const guestCart = await GuestCart.findOne({ guestId: req.body.guestId });
+  
+  if (!guestCart || !guestCart.items.length) {
+    return res.status(200).json({
+      success: true,
+      message: 'No guest cart found to transfer',
+      data: {}
+    });
+  }
+  
+  // Get user with cart
+  const user = await User.findById(req.user.id);
+  
+  // Initialize cart if it doesn't exist
+  if (!user.cart) {
+    user.cart = { items: [] };
+  }
+  
+  // Merge guest cart items with user cart
+  guestCart.items.forEach(guestItem => {
+    const existingItemIndex = user.cart.items.findIndex(
+      item => item.productId.toString() === guestItem.productId.toString()
+    );
+    
+    if (existingItemIndex > -1) {
+      // Update quantity if product already in cart
+      user.cart.items[existingItemIndex].quantity += guestItem.quantity;
+    } else {
+      // Add new item to cart
+      user.cart.items.push({
+        productId: guestItem.productId,
+        quantity: guestItem.quantity,
+        selected: guestItem.selected
+      });
+    }
+  });
+  
+  await user.save();
+  
+  // Delete guest cart
+  await GuestCart.findOneAndDelete({ guestId: req.body.guestId });
+  
+  // Populate product details in response
+  const populatedUser = await User.findById(req.user.id)
+    .populate('cart.items.productId');
+  
+  res.status(200).json({
+    success: true,
+    message: 'Guest cart transferred successfully',
+    data: populatedUser.cart
+  });
+});
