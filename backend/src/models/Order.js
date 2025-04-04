@@ -1,15 +1,16 @@
+// Update to the Order model to add payment-related fields
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // Reference to the User model
+    ref: "User",
     required: true,
   },
   orderItems: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "OrderItem", // Reference to the OrderItem model
+      ref: "OrderItem",
       required: true,
     },
   ],
@@ -30,19 +31,48 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Payment Failed", "Refunded"],
     default: "Pending",
   },
   addressId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Address", // Reference to the Address model
+    ref: "Address",
     required: true,
   },
   paymentMethodId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "PaymentMethod", // Reference to the PaymentMethod model
+    ref: "PaymentMethod",
     required: true,
   },
+  // New payment-related fields
+  paymentIntentId: {
+    type: String,
+  },
+  isPaid: {
+    type: Boolean,
+    default: false,
+  },
+  paidAt: {
+    type: Date,
+  },
+  paymentStatus: {
+    type: String,
+    enum: ["pending", "processing", "succeeded", "failed", "refunded"],
+    default: "pending",
+  },
+  paymentErrorMessage: {
+    type: String,
+  },
+  refundId: {
+    type: String,
+  },
+  refundAmount: {
+    type: Number,
+  },
+  refundedAt: {
+    type: Date,
+  },
+  // End of new fields
   orderDate: {
     type: Date,
     default: Date.now,

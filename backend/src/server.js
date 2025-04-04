@@ -13,7 +13,7 @@ dotenv.config();
 // Import route files
 const addressRoutes = require("./routes/addressRoutes");
 const authRoutes = require("./routes/authRoutes");
-const cartRoutes = require("./routes/cartRoutes"); // Unified cart routes
+const cartRoutes = require("./routes/cartRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const productRoutes = require("./routes/productRoutes");
@@ -22,9 +22,14 @@ const recommendationRoutes = require("./routes/recommendationRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const shoppingListRoutes = require("./routes/shoppingListRoutes");
 const userRoutes = require("./routes/userRoutes");
+const favouriteItemRoutes = require('./routes/favouriteItemRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Initialize express app
 const app = express();
+
+// Special handling for the Stripe webhook endpoint
+app.post('/api/payments/webhook', express.raw({type: 'application/json'}), paymentRoutes);
 
 // Body parser
 app.use(express.json({ limit: "10kb" }));
@@ -50,8 +55,10 @@ app.use("/api/products", productRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/shopping-lists", shoppingListRoutes); // Changed from singular to plural for consistency
+app.use("/api/shopping-lists", shoppingListRoutes); 
 app.use("/api/users", userRoutes);
+app.use('/api/favourites', favouriteItemRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Base route
 app.get("/", (req, res) => {
