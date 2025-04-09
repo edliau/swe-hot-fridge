@@ -1,3 +1,4 @@
+// models/Product.js
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -63,13 +64,10 @@ const productSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
-  inStock: {
-    type: Boolean,
-    default: true
-  },
   stockQuantity: {
     type: Number,
-    default: 0
+    default: 0,
+    min: [0, 'Stock quantity cannot be negative']
   },
   isFeatured: {
     type: Boolean,
@@ -112,6 +110,11 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Remove the inStock field and replace with a virtual property
+productSchema.virtual('inStock').get(function() {
+  return this.stockQuantity > 0;
 });
 
 // Calculate average rating before saving

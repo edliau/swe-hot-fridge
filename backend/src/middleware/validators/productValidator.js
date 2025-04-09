@@ -1,6 +1,8 @@
+// Update middleware/validators/productValidator.js
+
 const { body, param, validationResult } = require('express-validator');
 
-// Validation for creating/updating products
+// Validation for creating products (keep your existing code)
 exports.validateProduct = [
   body('name')
     .notEmpty().withMessage('Product name is required')
@@ -15,6 +17,30 @@ exports.validateProduct = [
     .notEmpty().withMessage('Product price is required')
     .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
   
+  body('category')
+    .notEmpty().withMessage('Product category is required')
+    .isIn(['meat', 'dairy', 'produce', 'beverages', 'alcohol', 'condiments', 'cleaning', 'personal-care', 'other'])
+    .withMessage('Invalid category value'),
+  
+  // Other validations...
+];
+
+// New validator for partial product updates
+exports.validatePartialProductUpdate = [
+  // Only validate the fields that are provided, don't require any specific field
+  body('name')
+    .optional()
+    .isString().withMessage('Product name must be a string')
+    .isLength({ min: 2, max: 100 }).withMessage('Product name must be between 2 and 100 characters'),
+  
+  body('description')
+    .optional()
+    .isString().withMessage('Product description must be a string'),
+  
+  body('price')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  
   body('discountPrice')
     .optional()
     .isFloat({ min: 0 }).withMessage('Discount price must be a positive number'),
@@ -24,7 +50,7 @@ exports.validateProduct = [
     .isBoolean().withMessage('isOnSale must be a boolean value'),
   
   body('category')
-    .notEmpty().withMessage('Product category is required')
+    .optional()
     .isIn(['meat', 'dairy', 'produce', 'beverages', 'alcohol', 'condiments', 'cleaning', 'personal-care', 'other'])
     .withMessage('Invalid category value'),
   
@@ -64,10 +90,6 @@ exports.validateProduct = [
     .optional()
     .isArray().withMessage('Allergens must be an array'),
   
-  body('inStock')
-    .optional()
-    .isBoolean().withMessage('inStock must be a boolean value'),
-  
   body('stockQuantity')
     .optional()
     .isInt({ min: 0 }).withMessage('Stock quantity must be a positive integer'),
@@ -77,7 +99,7 @@ exports.validateProduct = [
     .isBoolean().withMessage('isFeatured must be a boolean value')
 ];
 
-// Validation for product ratings/reviews
+// Validation for product ratings/reviews - keep existing code
 exports.validateProductRating = [
   body('rating')
     .notEmpty().withMessage('Rating is required')
@@ -88,13 +110,13 @@ exports.validateProductRating = [
     .isString().withMessage('Review must be a string')
 ];
 
-// Validation for product ID parameter
+// Validation for product ID parameter - keep existing code
 exports.validateProductId = [
   param('id')
     .isMongoId().withMessage('Invalid product ID format')
 ];
 
-// Middleware to handle validation errors
+// Middleware to handle validation errors - keep existing code
 exports.handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

@@ -1,3 +1,4 @@
+// routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
@@ -31,12 +32,13 @@ router.post(
   productController.createProduct
 );
 
+// Updated route to use the partial validator for product updates
 router.put(
   '/:id',
   protect,
   authorize('admin'),
   productValidator.validateProductId,
-  productValidator.validateProduct,
+  productValidator.validatePartialProductUpdate, // Using our new partial validator
   productValidator.handleValidationErrors,
   productController.updateProduct
 );
@@ -47,6 +49,21 @@ router.delete(
   authorize('admin'),
   productValidator.validateProductId,
   productController.deleteProduct
+);
+
+// Stock update route
+router.patch(
+  '/:id/stock',
+  protect,
+  authorize('admin'),
+  productValidator.validateProductId,
+  [
+    body('stockQuantity')
+      .notEmpty().withMessage('Stock quantity is required')
+      .isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer')
+  ],
+  productValidator.handleValidationErrors,
+  productController.updateProductStock
 );
 
 module.exports = router;

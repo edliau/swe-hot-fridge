@@ -129,17 +129,53 @@ exports.createProduct = async (req, res) => {
 // Update a product
 exports.updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
+    // Find product first to properly handle virtual properties
+    const product = await Product.findById(req.params.id);
+    
     if (!product) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
+    
+    // Update only the fields that are provided
+    if (req.body.name) product.name = req.body.name;
+    if (req.body.description) product.description = req.body.description;
+    if (req.body.price !== undefined) product.price = req.body.price;
+    if (req.body.discountPrice !== undefined) product.discountPrice = req.body.discountPrice;
+    if (req.body.isOnSale !== undefined) product.isOnSale = req.body.isOnSale;
+    if (req.body.category) product.category = req.body.category;
+    if (req.body.image) product.image = req.body.image;
+    if (req.body.ingredients) product.ingredients = req.body.ingredients;
+    if (req.body.stockQuantity !== undefined) product.stockQuantity = req.body.stockQuantity;
+    if (req.body.isFeatured !== undefined) product.isFeatured = req.body.isFeatured;
+    
+    // Handle nutritionalInfo updates if provided
+    if (req.body.nutritionalInfo) {
+      if (!product.nutritionalInfo) {
+        product.nutritionalInfo = {};
+      }
+      
+      if (req.body.nutritionalInfo.calories !== undefined) 
+        product.nutritionalInfo.calories = req.body.nutritionalInfo.calories;
+      if (req.body.nutritionalInfo.fat !== undefined) 
+        product.nutritionalInfo.fat = req.body.nutritionalInfo.fat;
+      if (req.body.nutritionalInfo.carbs !== undefined) 
+        product.nutritionalInfo.carbs = req.body.nutritionalInfo.carbs;
+      if (req.body.nutritionalInfo.protein !== undefined) 
+        product.nutritionalInfo.protein = req.body.nutritionalInfo.protein;
+      if (req.body.nutritionalInfo.sodium !== undefined) 
+        product.nutritionalInfo.sodium = req.body.nutritionalInfo.sodium;
+    }
+    
+    // Handle allergens if provided
+    if (req.body.allergens) {
+      product.allergens = req.body.allergens;
+    }
+    
+    // Save the updated product
+    await product.save();
 
     res.status(200).json({
       success: true,
@@ -148,6 +184,49 @@ exports.updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating product:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+// Add a new utility method to update stock quantity
+exports.updateProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stockQuantity } = req.body;
+    
+    if (stockQuantity === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Stock quantity is required",
+      });
+    }
+    
+    const product = await Product.findById(id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+    
+    // Update the stock quantity
+    product.stockQuantity = stockQuantity;
+    
+    // Save the product (inStock will be automatically determined by the virtual property)
+    await product.save();
+    
+    res.status(200).json({
+      success: true,
+      message: "Product stock updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error updating product stock:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
