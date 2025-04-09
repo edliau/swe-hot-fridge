@@ -26,9 +26,9 @@ const productSchema = new mongoose.Schema({
     default: false
   },
   category: {
-    type: String,
-    required: [true, 'Product category is required'],
-    enum: ['meat', 'dairy', 'produce', 'beverages', 'alcohol', 'condiments', 'cleaning', 'personal-care', 'other']
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
   },
   image: {
     type: String,
