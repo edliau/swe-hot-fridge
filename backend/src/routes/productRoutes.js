@@ -4,6 +4,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const productValidator = require('../middleware/validators/productValidator');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const { body } = require('express-validator');
 
 // Public routes
 router.get('/', productController.getProducts);
