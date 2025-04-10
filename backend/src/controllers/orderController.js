@@ -25,12 +25,10 @@ exports.createOrder = async (req, res) => {
     for (const item of orderItems) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: `Product not found with ID: ${item.productId}`,
-          });
+        return res.status(404).json({
+          success: false,
+          message: `Product not found with ID: ${item.productId}`,
+        });
       }
 
       // Check stock availability
@@ -39,12 +37,10 @@ exports.createOrder = async (req, res) => {
         (product.stockQuantity !== undefined &&
           product.stockQuantity < item.quantity)
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: `Product ${product.name} is out of stock or has insufficient quantity`,
-          });
+        return res.status(400).json({
+          success: false,
+          message: `Product ${product.name} is out of stock or has insufficient quantity`,
+        });
       }
 
       // Get the correct price (regular or discount)
@@ -131,13 +127,11 @@ exports.getOrderItems = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Order not found" });
     }
-    res
-      .status(200)
-      .json({
-        success: true,
-        count: order.orderItems.length,
-        data: order.orderItems,
-      });
+    res.status(200).json({
+      success: true,
+      count: order.orderItems.length,
+      data: order.orderItems,
+    });
   } catch (error) {
     console.error("Error fetching order items:", error);
     res
