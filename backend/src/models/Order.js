@@ -1,4 +1,3 @@
-// Update to the Order model to add payment-related fields
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -9,9 +8,29 @@ const orderSchema = new mongoose.Schema({
   },
   orderItems: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "OrderItem",
-      required: true,
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+      },
+      productName: {
+        type: String,
+        required: [true, "Product name is required"],
+      },
+      quantity: {
+        type: Number,
+        required: [true, "Quantity is required"],
+        min: [1, "Quantity must be at least 1"],
+      },
+      price: {
+        type: Number,
+        required: [true, "Price is required"],
+        min: [0, "Price cannot be negative"],
+      },
+      total: {
+        type: Number,
+        default: 0,
+      },
     },
   ],
   subtotal: {
@@ -31,7 +50,15 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Payment Failed", "Refunded"],
+    enum: [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+      "Payment Failed",
+      "Refunded",
+    ],
     default: "Pending",
   },
   addressId: {
@@ -44,7 +71,8 @@ const orderSchema = new mongoose.Schema({
     ref: "PaymentMethod",
     required: true,
   },
-  // New payment-related fields
+
+  // Payment-related fields
   paymentIntentId: {
     type: String,
   },
@@ -72,7 +100,7 @@ const orderSchema = new mongoose.Schema({
   refundedAt: {
     type: Date,
   },
-  // End of new fields
+
   orderDate: {
     type: Date,
     default: Date.now,
@@ -95,9 +123,19 @@ const orderSchema = new mongoose.Schema({
   },
 });
 
-// Middleware to calculate total price before saving
+// Pre-save middleware to calculate item totals and overall total
 orderSchema.pre("save", function (next) {
+  // Calculate item totals
+  this.orderItems.forEach((item) => {
+    item.total = item.price * item.quantity;
+  });
+
+  // Recalculate subtotal
+  this.subtotal = this.orderItems.reduce((acc, item) => acc + item.total, 0);
+
+  // Total = subtotal + tax
   this.total = this.subtotal + this.tax;
+
   next();
 });
 

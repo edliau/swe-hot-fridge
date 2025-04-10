@@ -1,4 +1,5 @@
 const { body, param, validationResult } = require("express-validator");
+const mongoose = require("mongoose");
 
 // Validation for creating/updating an order
 exports.validateOrder = [
@@ -13,10 +14,40 @@ exports.validateOrder = [
     .withMessage("Order items are required")
     .isArray()
     .withMessage("Order items must be an array")
-    .custom((value) =>
-      value.every((item) => mongoose.Types.ObjectId.isValid(item))
+    .custom(
+      (value) =>
+        value.every((item) => mongoose.Types.ObjectId.isValid(item.productId)) // Assuming productId exists in orderItems
     )
-    .withMessage("Each OrderItem ID must be a valid MongoId"),
+    .withMessage("Each OrderItem productId must be a valid MongoId"),
+
+  body("orderItems.*.productId")
+    .notEmpty()
+    .withMessage("Product ID is required")
+    .isMongoId()
+    .withMessage("Invalid Product ID format"),
+
+  body("orderItems.*.productName")
+    .notEmpty()
+    .withMessage("Product name is required")
+    .isString()
+    .withMessage("Product name must be a string"),
+
+  body("orderItems.*.quantity")
+    .notEmpty()
+    .withMessage("Quantity is required")
+    .isInt({ min: 1 })
+    .withMessage("Quantity must be a positive integer"),
+
+  body("orderItems.*.price")
+    .notEmpty()
+    .withMessage("Price is required")
+    .isFloat({ min: 0 })
+    .withMessage("Price must be a positive number"),
+
+  body("orderItems.*.total")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Total must be a positive number"),
 
   body("subtotal")
     .notEmpty()
@@ -38,7 +69,15 @@ exports.validateOrder = [
 
   body("status")
     .optional()
-    .isIn(["Pending", "Processing", "Shipped", "Delivered", "Cancelled"])
+    .isIn([
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+      "Payment Failed",
+      "Refunded",
+    ])
     .withMessage("Invalid status value"),
 
   body("addressId")
