@@ -1,17 +1,28 @@
 const express = require("express");
 const router = express.Router();
-const orderController = require("../controllers/orderController");
+const {
+  createOrder,
+  updateStatus,
+  cancelOrder,
+  processRefund,
+  updateOrderAfterPayment,
+} = require("../controllers/orderController");
+const { protect, guestSession } = require("../middleware/authMiddleware");
 
-// Create a new order
-router.post("/orders", orderController.createOrder);
+// Apply guest session middleware to all routes
+router.use(guestSession);
 
-// Update order status
-router.put("/orders/:id/status", orderController.updateStatus);
+// Public routes that work for both guests and authenticated users
+// Apply a modified protect middleware that allows guests
 
-// Cancel an order
-router.delete("/orders/:id", orderController.cancelOrder);
+router.route("/").post(protect, createOrder);
 
-// Process a refund
-router.post("/orders/:id/refund", orderController.processRefund);
+router.route("/:id/status").put(protect, updateStatus);
+
+router.route("/:id").delete(protect, cancelOrder);
+
+router.route("/:id/refund").post(protect, processRefund);
+
+router.route("/:id/payment").put(protect, updateOrderAfterPayment);
 
 module.exports = router;
