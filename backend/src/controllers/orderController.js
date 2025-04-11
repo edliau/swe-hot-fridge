@@ -1,5 +1,8 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const Address = require("../models/Address");
+const PaymentMethod = require("../models/PaymentMethod");
+const User = require("../models/User");
 
 // Create a new order
 exports.createOrder = async (req, res) => {
@@ -19,7 +22,7 @@ exports.createOrder = async (req, res) => {
     const userId = req.user.id; // Get user ID from auth middleware
 
     let subtotal = 0;
-    const orderItemsIds = [];
+    const orderItemsArray = [];
 
     // Create order items and calculate subtotal
     for (const item of orderItems) {
@@ -44,10 +47,9 @@ exports.createOrder = async (req, res) => {
       }
 
       // Get the correct price (regular or discount)
-      const price =
-        product.isOnSale && product.discountPrice
-          ? product.discountPrice
-          : product.price;
+      const price = product.isOnSale && product.discountPrice
+        ? product.discountPrice
+        : product.price;
 
       const orderItem = {
         productId: item.productId,
@@ -57,7 +59,7 @@ exports.createOrder = async (req, res) => {
         total: price * item.quantity,
       };
 
-      orderItemsIds.push(orderItem);
+      orderItemsArray.push(orderItem);
       subtotal += orderItem.total;
     }
 
@@ -80,7 +82,7 @@ exports.createOrder = async (req, res) => {
     const total = subtotal + tax;
     const order = new Order({
       userId,
-      orderItems: orderItemsIds,
+      orderItems: orderItemsArray,
       subtotal,
       tax: parseFloat(tax) || 0,
       total,

@@ -1,7 +1,6 @@
 // controllers/paymentController.js
 const User = require('../models/User');
 const Order = require('../models/Order');
-const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const PaymentMethod = require('../models/PaymentMethod');
 const ErrorResponse = require('../utils/errorResponse');
@@ -150,16 +149,14 @@ exports.handleWebhook = asyncHandler(async (req, res, next) => {
         await Order.findByIdAndUpdate(orderId, { status: 'Processing' });
         
         // Reduce product stock quantities
-        const order = await Order.findById(orderId).populate('orderItems');
+        const order = await Order.findById(orderId);
         
-        for (const orderItemId of order.orderItems) {
-          const orderItem = await OrderItem.findById(orderItemId);
-          
-          if (orderItem) {
+        if (order && order.orderItems && order.orderItems.length > 0) {
+          for (const item of order.orderItems) {
             // Reduce stock for each product
             await Product.findByIdAndUpdate(
-              orderItem.productId,
-              { $inc: { stockQuantity: -orderItem.quantity } }
+              item.productId,
+              { $inc: { stockQuantity: -item.quantity } }
             );
           }
         }
@@ -354,7 +351,6 @@ exports.handleWebhook = async (req, res) => {
       
       // Import required models
       const Order = require('../models/Order');
-      const OrderItem = require('../models/OrderItem');
       const Product = require('../models/Product');
       
       // Find the order
@@ -375,21 +371,21 @@ exports.handleWebhook = async (req, res) => {
       await order.save();
       
       // Update product stock
-      const orderItems = await OrderItem.find({ orderId: order._id });
-      
-      for (const item of orderItems) {
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { 
-            $inc: { stockQuantity: -item.quantity },
-            $set: { 
-              inStock: function() {
-                return this.stockQuantity > 0;
+      if (order.orderItems && order.orderItems.length > 0) {
+        for (const item of order.orderItems) {
+          await Product.findByIdAndUpdate(
+            item.productId,
+            { 
+              $inc: { stockQuantity: -item.quantity },
+              $set: { 
+                inStock: function() {
+                  return this.stockQuantity > 0;
+                }
               }
-            }
-          },
-          { new: true }
-        );
+            },
+            { new: true }
+          );
+        }
       }
       
       console.log(`Order ${orderId} payment successful and status updated`);
