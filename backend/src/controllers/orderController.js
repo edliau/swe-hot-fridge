@@ -4,6 +4,73 @@ const Address = require("../models/Address");
 const PaymentMethod = require("../models/PaymentMethod");
 const User = require("../models/User");
 
+// Get all orders for a user
+exports.getUserOrders = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from auth middleware
+    
+    // Find all orders for this user, sorted by most recent first
+    const orders = await Order.find({ userId })
+      .sort({ orderDate: -1 })
+      .populate('addressId')
+      .populate('paymentMethodId');
+    
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      data: orders
+    });
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
+  }
+};
+
+// Get a specific order by ID
+exports.getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id; // Get user ID from auth middleware
+    
+    // Find the order and ensure it belongs to the current user
+    const order = await Order.findById(id)
+      .populate('addressId')
+      .populate('paymentMethodId')
+      .populate('orderItems.productId');
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+    
+    // Check if the order belongs to the user (unless admin)
+    if (order.userId.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access this order"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
+  }
+};
+
 // Create a new order
 exports.createOrder = async (req, res) => {
   try {
@@ -319,5 +386,130 @@ exports.processRefund = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// Create a new order from cart
+exports.createOrderFromCart = async (req, res) => {
+  try {
+    const {
+      addressId,
+      paymentMethodId,
+      tax,
+      deliveryDate,
+      deliveryTimeSlot,
+      isPickup,
+      pickupLocation,
+      specialInstructions,
+    } = req.body;
+
+    const userId = req.user.id; // Get user ID from auth middleware
+
+    // Fetch user's cart
+    const user = await User.findById(userId).populate('cart.items.productId');
+    
+    if (!user.cart || !user.cart.items || user.cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty',
+      });
+    }
+    
+    // Filter selected items only
+    const selectedItems = user.cart.items.filter(item => item.selected);
+    
+    if (selectedItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No items selected in cart',
+      });
+    }
+
+    let subtotal = 0;
+    const orderItemsArray = [];
+
+    // Create order items and calculate subtotal
+    for (const item of selectedItems) {
+      const product = item.productId;
+      
+      // Check stock availability
+      if (!product.inStock || (product.stockQuantity !== undefined && product.stockQuantity < item.quantity)) {
+        return res.status(400).json({
+          success: false,
+          message: `Product ${product.name} is out of stock or has insufficient quantity`,
+        });
+      }
+
+      // Get the correct price (regular or discount)
+      const price = product.isOnSale && product.discountPrice
+        ? product.discountPrice
+        : product.price;
+
+      const orderItem = {
+        productId: product._id,
+        productName: product.name,
+        quantity: item.quantity,
+        price: price,
+        total: price * item.quantity,
+      };
+
+      orderItemsArray.push(orderItem);
+      subtotal += orderItem.total;
+    }
+
+    // Validate address and payment method
+    const address = await Address.findById(addressId);
+    if (!address || address.userId.toString() !== userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid shipping address" 
+      });
+    }
+
+    const paymentMethod = await PaymentMethod.findById(paymentMethodId);
+    if (!paymentMethod || paymentMethod.userId.toString() !== userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid payment method" 
+      });
+    }
+
+    // Create the order
+    const total = subtotal + (parseFloat(tax) || 0);
+    const order = new Order({
+      userId,
+      orderItems: orderItemsArray,
+      subtotal,
+      tax: parseFloat(tax) || 0,
+      total,
+      addressId,
+      paymentMethodId,
+      deliveryDate: deliveryDate || undefined,
+      deliveryTimeSlot: deliveryTimeSlot || undefined,
+      isPickup: isPickup || false,
+      pickupLocation: pickupLocation || undefined,
+      specialInstructions: specialInstructions || undefined,
+      status: "Pending",
+      paymentStatus: "pending",
+    });
+
+    await order.save();
+
+    // Clear the selected items from cart
+    user.cart.items = user.cart.items.filter(item => !item.selected);
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully from cart",
+      data: order,
+    });
+  } catch (error) {
+    console.error("Error creating order from cart:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
   }
 };

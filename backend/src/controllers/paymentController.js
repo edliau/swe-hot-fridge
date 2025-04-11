@@ -50,7 +50,7 @@ exports.createPaymentIntent = asyncHandler(async (req, res, next) => {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
-        userId: user._id
+        userId: user._id.toString()
       });
       
       stripeCustomerId = customer.id;
@@ -65,8 +65,8 @@ exports.createPaymentIntent = asyncHandler(async (req, res, next) => {
       amount: order.total,
       customerId: stripeCustomerId,
       paymentMethodId: paymentMethod ? paymentMethod.stripePaymentMethodId : undefined,
-      orderId: order._id,
-      userId: user._id,
+      orderId: order._id.toString(),
+      userId: user._id.toString(),
       email: user.email,
       description: `Payment for order #${order._id}`,
       confirm: !!paymentMethodId // Confirm if payment method provided
@@ -213,7 +213,7 @@ exports.createRefund = asyncHandler(async (req, res, next) => {
       paymentIntentId: order.paymentIntentId,
       amount: amount || order.total, // Full refund if amount not specified
       reason,
-      orderId: order._id,
+      orderId: order._id.toString(),
       userId: order.userId
     });
     
