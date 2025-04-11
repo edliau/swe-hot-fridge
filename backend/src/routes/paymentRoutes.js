@@ -1,16 +1,15 @@
-// routes/paymentRoutes.js
+// Updated routes/paymentRoutes.js
 const express = require('express');
 const router = express.Router();
 const { 
   createPaymentIntent, 
-  handleWebhook, 
   createRefund, 
   getPaymentMethods 
 } = require('../controllers/paymentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Webhook doesn't need to be authenticated
-router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+// Note: The webhook route is now handled directly in server.js
+// with proper raw body handling
 
 // Protected payment routes
 router.post('/create-payment-intent', protect, createPaymentIntent);
@@ -19,6 +18,7 @@ router.get('/methods', protect, getPaymentMethods);
 // Admin-only routes
 router.post('/refund', protect, authorize('admin'), createRefund);
 
+// Test route for adding payment methods (keep if needed)
 router.post('/test-add-payment-method', protect, async (req, res, next) => {
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);

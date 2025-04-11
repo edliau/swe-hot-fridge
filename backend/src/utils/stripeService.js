@@ -45,20 +45,39 @@ exports.getCustomer = async (customerId) => {
  */
 exports.createPaymentIntent = async (paymentData) => {
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(paymentData.amount * 100), // Convert to cents
+    // Ensure amount is an integer (cents)
+    const amount = Math.round(paymentData.amount * 100);
+    
+    const paymentIntentData = {
+      amount,
       currency: paymentData.currency || 'sgd', // Singapore dollar as default
       customer: paymentData.customerId,
-      payment_method: paymentData.paymentMethodId,
-      confirm: paymentData.confirm || false,
-      description: paymentData.description || 'Hot Fridge order payment',
       metadata: {
         orderId: paymentData.orderId,
         userId: paymentData.userId
       },
       receipt_email: paymentData.email,
-      setup_future_usage: 'on_session'
-    });
+      description: paymentData.description || 'Hot Fridge order payment'
+    };
+
+    // Only add payment_method if provided
+    if (paymentData.paymentMethodId) {
+      paymentIntentData.payment_method = paymentData.paymentMethodId;
+      
+      // If automatic confirmation is requested
+      if (paymentData.confirm) {
+        paymentIntentData.confirm = true;
+        paymentIntentData.confirmation_method = 'manual'; 
+        paymentIntentData.return_url = paymentData.returnUrl || 'https://hotfridge.com/order-confirmation';
+        
+        // For future payments with the same payment method
+        if (paymentData.setupFutureUsage) {
+          paymentIntentData.setup_future_usage = 'on_session';
+        }
+      }
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
     
     return paymentIntent;
   } catch (error) {
@@ -70,11 +89,12 @@ exports.createPaymentIntent = async (paymentData) => {
 /**
  * Confirm a payment intent
  * @param {string} paymentIntentId - Payment intent ID
+ * @param {Object} options - Additional confirmation options
  * @returns {Promise<Object>} - Confirmed payment intent
  */
-exports.confirmPaymentIntent = async (paymentIntentId) => {
+exports.confirmPaymentIntent = async (paymentIntentId, options = {}) => {
   try {
-    return await stripe.paymentIntents.confirm(paymentIntentId);
+    return await stripe.paymentIntents.confirm(paymentIntentId, options);
   } catch (error) {
     console.error('Error confirming payment intent:', error);
     throw new Error(`Stripe error: ${error.message}`);
@@ -102,15 +122,21 @@ exports.capturePaymentIntent = async (paymentIntentId) => {
  */
 exports.createRefund = async (refundData) => {
   try {
-    return await stripe.refunds.create({
+    const refundOptions = {
       payment_intent: refundData.paymentIntentId,
-      amount: refundData.amount ? Math.round(refundData.amount * 100) : undefined, // Optional partial refund
       reason: refundData.reason || 'requested_by_customer',
       metadata: {
         orderId: refundData.orderId,
         userId: refundData.userId
       }
-    });
+    };
+    
+    // Add amount only if a partial refund is requested
+    if (refundData.amount) {
+      refundOptions.amount = Math.round(refundData.amount * 100); // Convert to cents
+    }
+    
+    return await stripe.refunds.create(refundOptions);
   } catch (error) {
     console.error('Error creating refund:', error);
     throw new Error(`Stripe error: ${error.message}`);

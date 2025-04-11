@@ -1,3 +1,5 @@
+// Modified server.js to properly handle Stripe webhooks
+
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
@@ -28,10 +30,45 @@ const paymentRoutes = require('./routes/paymentRoutes');
 // Initialize express app
 const app = express();
 
-// Special handling for the Stripe webhook endpoint
-app.post('/api/payments/webhook', express.raw({type: 'application/json'}), paymentRoutes);
+// Special handling for the Stripe webhook - must come BEFORE other middleware
+app.post('/api/payments/webhook', 
+  express.raw({type: 'application/json'}),
+  (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    let event;
+    
+    try {
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+      console.log(`⚠️ Webhook signature verification failed: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        console.log(`PaymentIntent ${paymentIntent.id} succeeded`);
+        
+        // Get order ID from metadata
+        const orderId = paymentIntent.metadata.orderId;
+        // Update your order in the database here...
+        break;
+        
+      // Handle other event types as needed
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+    
+    // Return a 200 response to acknowledge receipt of the event
+    res.status(200).json({received: true});
+  }
+);
 
-// Body parser
+// THEN add your regular body parser middleware for all other routes
 app.use(express.json({ limit: "10kb" }));
 
 // Cookie parser
@@ -46,9 +83,9 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // Mount routes
-app.use("/api/addresses", addressRoutes); // Changed from singular to plural for consistency
+app.use("/api/addresses", addressRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/cart", cartRoutes); // Unified cart routes
+app.use("/api/cart", cartRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
