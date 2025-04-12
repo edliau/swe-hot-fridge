@@ -128,12 +128,12 @@ export const cartAPI = {
   transferGuestCart: (guestId) => new API().post('/cart/transfer', { guestId })
 };
 
-// Favorites API Service
-export const favoritesAPI = {
-  getFavorites: () => new API().get('/favourites'),
-  addToFavorites: (productId) => new API().post('/favourites', { productId }),
-  removeFromFavorites: (id) => new API().delete(`/favourites/${id}`),
-  checkFavorite: (productId) => new API().get(`/favourites/check/${productId}`)
+// favourites API Service
+export const favouritesAPI = {
+  getfavourites: () => new API().get('/favourites'),
+  addTofavourites: (productId) => new API().post('/favourites', { productId }),
+  removeFromfavourites: (id) => new API().delete(`/favourites/${id}`),
+  checkfavourite: (productId) => new API().get(`/favourites/check/${productId}`)
 };
 
 // Categories API Service

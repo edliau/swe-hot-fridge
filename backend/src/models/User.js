@@ -81,7 +81,7 @@ const userSchema = new mongoose.Schema({
       'nut-free'
     ]
   },
-  favoriteItems: [
+  favouriteItems: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product'

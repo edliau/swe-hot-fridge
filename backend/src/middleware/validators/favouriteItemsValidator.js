@@ -1,21 +1,21 @@
 // middleware/validators/favouriteItemValidator.js
 const { body, param, validationResult } = require('express-validator');
 
-// Validator for adding to favorites
-exports.validateAddToFavorites = [
+// Validator for adding to favourites
+exports.validateAddTofavourites = [
   body('productId')
     .notEmpty().withMessage('Product ID is required')
     .isMongoId().withMessage('Invalid product ID format')
 ];
 
-// Validator for favorite item ID
-exports.validateFavoriteItemId = [
+// Validator for favourite item ID
+exports.validatefavouriteItemId = [
   param('id')
-    .isMongoId().withMessage('Invalid favorite item ID format')
+    .isMongoId().withMessage('Invalid favourite item ID format')
 ];
 
-// Validator for checking product in favorites
-exports.validateCheckFavorite = [
+// Validator for checking product in favourites
+exports.validateCheckfavourite = [
   param('productId')
     .isMongoId().withMessage('Invalid product ID format')
 ];

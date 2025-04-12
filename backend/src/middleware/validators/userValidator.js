@@ -96,7 +96,7 @@ exports.validateDietaryPreferences = [
     })
 ];
 
-//validate adding or removing favorites
+//validate adding or removing favourites
 exports.validateProductIdParam = [
   param('productId')
     .isMongoId().withMessage('Invalid product ID')

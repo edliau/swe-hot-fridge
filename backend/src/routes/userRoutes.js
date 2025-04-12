@@ -12,9 +12,9 @@ const {
   updatePaymentMethod,
   deletePaymentMethod,
   setDietaryPreferences,
-  addToFavorites,
-  removeFromFavorites,
-  getFavorites
+  addTofavourites,
+  removeFromfavourites,
+  getfavourites
 } = require('../controllers/userController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -56,9 +56,9 @@ router.route('/payment/:id')
 // Dietary preferences route
 router.put('/preferences', validateDietaryPreferences, handleValidationErrors, setDietaryPreferences);
 
-// Favorites routes
-router.get('/favorites', getFavorites);
-router.post('/favorites/:productId', validateProductIdParam, handleValidationErrors, addToFavorites);
-router.delete('/favorites/:productId', validateProductIdParam, handleValidationErrors, removeFromFavorites);
+// favourites routes
+router.get('/favourites', getfavourites);
+router.post('/favourites/:productId', validateProductIdParam, handleValidationErrors, addTofavourites);
+router.delete('/favourites/:productId', validateProductIdParam, handleValidationErrors, removeFromfavourites);
 
 module.exports = router;

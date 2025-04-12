@@ -5,14 +5,14 @@
     import { productsAPI } from '$lib/api';
     import { cartStore } from '$lib/stores/cart';
     import { authStore } from '$lib/stores/auth';
-    import { favoritesAPI } from '$lib/api';
+    import { favouritesAPI } from '$lib/api';
     
     const productId = $page.params.id;
     let product = null;
     let isLoading = true;
     let errorMessage = '';
     let quantity = 1;
-    let isFavorite = false;
+    let isfavourite = false;
     let isAddingToCart = false;
     let addToCartSuccess = false;
     
@@ -31,13 +31,13 @@
         
         product = response.data;
         
-        // Check if product is in favorites if user is authenticated
+        // Check if product is in favourites if user is authenticated
         if (isAuthenticated) {
           try {
-            const favoriteResponse = await favoritesAPI.checkFavorite(productId);
-            isFavorite = favoriteResponse.isFavorite;
+            const favouriteResponse = await favouritesAPI.checkfavourite(productId);
+            isfavourite = favouriteResponse.isfavourite;
           } catch (error) {
-            console.error('Error checking favorite status:', error);
+            console.error('Error checking favourite status:', error);
           }
         }
       } catch (error) {
@@ -74,34 +74,34 @@
       goto(`/buy-now?product=${productId}&quantity=${quantity}`);
     }
     
-    // Handle Favorite toggle
-    async function toggleFavorite() {
+    // Handle favourite toggle
+    async function togglefavourite() {
       if (!isAuthenticated) {
         goto('/account'); // Redirect to login page
         return;
       }
       
       try {
-        if (isFavorite) {
-          // Find the favorite item ID first
-          const favoritesResponse = await favoritesAPI.getFavorites();
-          if (favoritesResponse.success) {
-            const favorite = favoritesResponse.data.find(
+        if (isfavourite) {
+          // Find the favourite item ID first
+          const favouritesResponse = await favouritesAPI.getfavourites();
+          if (favouritesResponse.success) {
+            const favourite = favouritesResponse.data.find(
               fav => fav.productId._id === productId
             );
             
-            if (favorite) {
-              await favoritesAPI.removeFromFavorites(favorite._id);
-              isFavorite = false;
+            if (favourite) {
+              await favouritesAPI.removeFromfavourites(favourite._id);
+              isfavourite = false;
             }
           }
         } else {
-          await favoritesAPI.addToFavorites(productId);
-          isFavorite = true;
+          await favouritesAPI.addTofavourites(productId);
+          isfavourite = true;
         }
       } catch (error) {
-        console.error('Error toggling favorite:', error);
-        errorMessage = error.message || 'Failed to update favorites';
+        console.error('Error toggling favourite:', error);
+        errorMessage = error.message || 'Failed to update favourites';
       }
     }
     
@@ -154,7 +154,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </a>
-        <a href="/favorites" class="mx-2" aria-label="Favorites">
+        <a href="/favourites" class="mx-2" aria-label="favourites">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
           </svg>
@@ -256,11 +256,11 @@
               <div class="flex justify-between">
                 <h1 class="text-2xl font-bold mb-2">{product.name}</h1>
                 <button 
-                  on:click={toggleFavorite}
+                  on:click={togglefavourite}
                   class="text-gray-400 hover:text-red-500 focus:outline-none"
-                  aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  aria-label={isfavourite ? "Remove from favourites" : "Add to favourites"}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill={isFavorite ? "currentColor" : "none"} class:text-red-500={isFavorite} viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill={isfavourite ? "currentColor" : "none"} class:text-red-500={isfavourite} viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
                 </button>
@@ -447,7 +447,7 @@
             <li><a href="/account" class="hover:underline">My account</a></li>
             <li><a href="/cart" class="hover:underline">Shopping cart</a></li>
             <li><a href="/account/orders" class="hover:underline">Past orders</a></li>
-            <li><a href="/favorites" class="hover:underline">Favourites</a></li>
+            <li><a href="/favourites" class="hover:underline">Favourites</a></li>
           </ul>
         </div>
         

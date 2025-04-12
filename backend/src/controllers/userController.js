@@ -403,39 +403,39 @@ exports.setDietaryPreferences = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Add product to favorites
-// @route   POST /api/users/favorites/:productId
+// @desc    Add product to favourites
+// @route   POST /api/users/favourites/:productId
 // @access  Private
-exports.addToFavorites = asyncHandler(async (req, res, next) => {
+exports.addTofavourites = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
   
-  // Check if product already in favorites
-  if (user.favoriteItems.includes(req.params.productId)) {
+  // Check if product already in favourites
+  if (user.favouriteItems.includes(req.params.productId)) {
     return res.status(200).json({
       success: true,
-      message: 'Product already in favorites',
-      data: user.favoriteItems
+      message: 'Product already in favourites',
+      data: user.favouriteItems
     });
   }
   
-  // Add to favorites
-  user.favoriteItems.push(req.params.productId);
+  // Add to favourites
+  user.favouriteItems.push(req.params.productId);
   await user.save();
   
   res.status(200).json({
     success: true,
-    data: user.favoriteItems
+    data: user.favouriteItems
   });
 });
 
-// @desc    Remove product from favorites
-// @route   DELETE /api/users/favorites/:productId
+// @desc    Remove product from favourites
+// @route   DELETE /api/users/favourites/:productId
 // @access  Private
-exports.removeFromFavorites = asyncHandler(async (req, res, next) => {
+exports.removeFromfavourites = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
   
-  // Remove from favorites
-  user.favoriteItems = user.favoriteItems.filter(
+  // Remove from favourites
+  user.favouriteItems = user.favouriteItems.filter(
     item => item.toString() !== req.params.productId
   );
   
@@ -443,19 +443,19 @@ exports.removeFromFavorites = asyncHandler(async (req, res, next) => {
   
   res.status(200).json({
     success: true,
-    data: user.favoriteItems
+    data: user.favouriteItems
   });
 });
 
-// @desc    Get favorite products
-// @route   GET /api/users/favorites
+// @desc    Get favourite products
+// @route   GET /api/users/favourites
 // @access  Private
-exports.getFavorites = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id).populate('favoriteItems');
+exports.getfavourites = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id).populate('favouriteItems');
   
   res.status(200).json({
     success: true,
-    count: user.favoriteItems.length,
-    data: user.favoriteItems
+    count: user.favouriteItems.length,
+    data: user.favouriteItems
   });
 });

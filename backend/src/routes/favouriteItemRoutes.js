@@ -2,10 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const {
-  addToFavorites,
-  getFavorites,
-  removeFromFavorites,
-  checkFavorite
+  addTofavourites,
+  getfavourites,
+  removeFromfavourites,
+  checkfavourite
 } = require('../controllers/favouriteItemController');
 const { protect } = require('../middleware/authMiddleware');
 const { validateProductIdParam, handleValidationErrors } = require('../middleware/validators/userValidator');
@@ -13,15 +13,15 @@ const { validateProductIdParam, handleValidationErrors } = require('../middlewar
 // Protect all routes
 router.use(protect);
 
-// Routes for managing favorites
+// Routes for managing favourites
 router.route('/')
-  .get(getFavorites)
-  .post(addToFavorites);
+  .get(getfavourites)
+  .post(addTofavourites);
 
 router.route('/:id')
-  .delete(removeFromFavorites);
+  .delete(removeFromfavourites);
 
 router.route('/check/:productId')
-  .get(validateProductIdParam, handleValidationErrors, checkFavorite);
+  .get(validateProductIdParam, handleValidationErrors, checkfavourite);
 
 module.exports = router;
