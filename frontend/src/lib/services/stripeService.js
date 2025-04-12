@@ -65,6 +65,16 @@ class StripeService {
       throw new Error('Stripe not initialized');
     }
     
+    // Clean up any existing card element first
+    if (this.cardElement) {
+      try {
+        this.cardElement.unmount();
+      } catch (e) {
+        console.log("Unmounting previous card element failed:", e);
+      }
+      this.cardElement = null;
+    }
+    
     // Initialize elements if not already done
     if (!this.elements) {
       this.elements = this.stripe.elements();

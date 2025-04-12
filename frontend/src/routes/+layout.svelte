@@ -1,5 +1,12 @@
 <script>
-	import "../app.postcss";
-  </script>
+  import "../app.postcss";
+  import { onMount } from 'svelte';
+  import { authStore } from '$lib/stores/auth';
   
-  <slot />
+  onMount(() => {
+    // Initialize auth state
+    authStore.init();
+  });
+</script>
+  
+<slot />

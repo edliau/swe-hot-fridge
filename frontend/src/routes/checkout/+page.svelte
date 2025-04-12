@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
     import { cartStore, cartTotal } from '$lib/stores/cart';
     import { authStore } from '$lib/stores/auth';
@@ -88,15 +88,47 @@
         isLoading = false;
       }
     });
+
+    onDestroy(() => {
+  // Clean up Stripe resources when component is destroyed
+  if (stripeService.cardElement) {
+    try {
+      stripeService.cardElement.unmount();
+      stripeService.cardElement = null;
+    } catch (e) {
+      console.log("Error unmounting card element:", e);
+    }
+  }
+});
     
     async function loadUserData() {
-      try {
-        // Fetch user addresses
-        if (user.addresses && user.addresses.length > 0) {
-          addresses = user.addresses;
-          // Select default address if exists
-          const defaultAddress = addresses.find(addr => addr.isDefault);
-          selectedAddress = defaultAddress || addresses[0];
+    try {
+        console.log("Loading user data, user:", user);
+        
+        // Fetch user data with populated addresses
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+        });
+        
+        if (!response.ok) {
+        throw new Error('Failed to fetch user data');
+        }
+        
+        const result = await response.json();
+        console.log("User data received:", result);
+        
+        // If user has addresses, populate the addresses array
+        if (result.data.addresses && result.data.addresses.length > 0) {
+        addresses = result.data.addresses;
+        console.log("Addresses loaded:", addresses);
+        
+        // Select default address if exists
+        const defaultAddress = addresses.find(addr => addr.isDefault);
+        selectedAddress = defaultAddress || addresses[0];
+        } else {
+        console.log("No addresses found for user");
         }
         
         // Fetch payment methods
@@ -127,53 +159,86 @@
     }
     
     function setupCardElement() {
-      try {
-        // Create and mount the card element
-        setTimeout(() => {
-          const cardElement = stripeService.createCardElement('card-element');
-          
-          // Listen for card element errors
-          stripeService.listenForCardElementErrors((error) => {
-            cardElementError = error;
-          });
-        }, 100);
-      } catch (error) {
+    try {
+        console.log("Setting up card element...");
+        
+        // Make sure div exists before trying to mount
+        const cardElement = document.getElementById('card-element');
+        if (!cardElement) {
+        console.error("Card element container not found in DOM");
+        return;
+        }
+        
+        // If Stripe is initialized, create the card element
+        if (stripeService.isInitialized) {
+        // Create card element and handle errors
+        const element = stripeService.createCardElement('card-element');
+        
+        // Listen for card element errors
+        element.on('change', (event) => {
+            cardElementError = event.error ? event.error.message : '';
+        });
+        
+        console.log("Card element setup complete");
+        } else {
+        console.error("Stripe not initialized");
+        errorMessage = "Payment system not ready yet";
+        }
+    } catch (error) {
         console.error('Error setting up card element:', error);
-        errorMessage = 'Failed to set up payment form. Please try again later.';
-      }
+        errorMessage = 'Failed to set up payment form: ' + error.message;
+    }
     }
     
     async function handleAddressSubmit() {
-      if (!addressForm.streetAddress || !addressForm.city || !addressForm.state || 
-          !addressForm.postalCode || !addressForm.phoneNumber) {
+    if (!addressForm.streetAddress || !addressForm.city || !addressForm.state || 
+        !addressForm.postalCode || !addressForm.phoneNumber) {
         errorMessage = 'Please fill in all required fields';
         return;
-      }
-      
-      try {
+    }
+    
+    try {
         // Add user ID to address form
         const addressData = {
-          ...addressForm,
-          userId: user._id
+        ...addressForm,
+        userId: $authStore.user._id
         };
         
         // Call API to save address
         const response = await fetch(`${import.meta.env.VITE_API_URL}/addresses`, {
-          method: 'POST',
-          headers: {
+        method: 'POST',
+        headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(addressData)
+        },
+        body: JSON.stringify(addressData)
         });
-        
-        if (!response.ok) {
-          throw new Error('Failed to save address');
-        }
         
         const result = await response.json();
         
-        // Add the new address to the list and select it
+        if (!result.success) {
+        throw new Error(result.message || 'Failed to save address');
+        }
+        
+        console.log('Address saved successfully:', result.data);
+        
+        // Add the new address to the user's addresses in the database
+        const updateUserResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/address`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(addressData)
+        });
+        
+        const updateUserResult = await updateUserResponse.json();
+        
+        if (!updateUserResult.success) {
+        console.warn('Address created but not added to user profile:', updateUserResult.message);
+        }
+        
+        // Add the new address to the local addresses array
         addresses = [...addresses, result.data];
         selectedAddress = result.data;
         
@@ -182,24 +247,24 @@
         
         // Reset form
         addressForm = {
-          streetAddress: '',
-          apartment: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          country: 'Singapore',
-          phoneNumber: '',
-          isDefault: false
+        streetAddress: '',
+        apartment: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'Singapore',
+        phoneNumber: '',
+        isDefault: false
         };
         
         successMessage = 'Address saved successfully';
         setTimeout(() => {
-          successMessage = '';
+        successMessage = '';
         }, 3000);
-      } catch (error) {
+    } catch (error) {
         console.error('Error saving address:', error);
         errorMessage = error.message || 'Failed to save address';
-      }
+    }
     }
     
     function selectAddress(address) {
@@ -211,42 +276,59 @@
     }
     
     function goToStage(newStage) {
-      if (newStage === 'payment' && !selectedAddress) {
-        errorMessage = 'Please select a shipping address';
-        return;
-      }
-      
-      if (newStage === 'review') {
+    // If moving away from payment stage, clean up card element
+    if (stage === 'payment' && newStage !== 'payment') {
+        if (stripeService.cardElement) {
+        try {
+            stripeService.cardElement.unmount();
+            stripeService.cardElement = null;
+        } catch (e) {
+            console.log("Error unmounting card element:", e);
+        }
+        }
+    }
+        
+    if (newStage === 'review') {
         if (!selectedPaymentMethod && !showPaymentForm) {
-          errorMessage = 'Please select a payment method';
-          return;
+        errorMessage = 'Please select a payment method';
+        return;
         }
         
         // Check for card element errors if using a new card
         if (showPaymentForm && cardElementError) {
-          errorMessage = 'Please fix the issues with your card information: ' + cardElementError;
-          return;
+        errorMessage = 'Please fix the issues with your card information: ' + cardElementError;
+        return;
         }
-      }
-      
-      // If going to payment stage, initialize Stripe elements
-      if (newStage === 'payment' && stripeService.isInitialized) {
-        setupCardElement();
-      }
-      
-      // If moving away from payment stage to review, validate payment form
-      if (stage === 'payment' && newStage === 'review' && showPaymentForm) {
+    }
+    
+    // Clear any error messages
+    errorMessage = '';
+    
+    // If moving away from payment stage to review, validate payment form
+    if (stage === 'payment' && newStage === 'review' && showPaymentForm) {
         if (!paymentForm.cardholderName) {
-          errorMessage = 'Please enter the cardholder name';
-          return;
+        errorMessage = 'Please enter the cardholder name';
+        return;
         }
-      }
-      
-      // Update the stage
-      stage = newStage;
-      
-      // Clear any error messages
-      errorMessage = '';
+    }
+
+    // If going to payment stage
+  if (newStage === 'payment' && showPaymentForm) {
+    setTimeout(() => {
+      setupCardElement();
+    }, 100);
+  }
+    
+    // Update the stage
+    stage = newStage;
+    
+    // If going to payment stage, initialize Stripe elements
+    if (newStage === 'payment') {
+        // Only set up card element if showing payment form
+        if (showPaymentForm) {
+        setupCardElement();
+        }
+    }
     }
     
     async function placeOrder() {
@@ -362,6 +444,9 @@
         
         // Clear cart after successful order
         await cartStore.clearCart();
+
+        // Refresh user data to get updated addresses
+        await authStore.refreshUserData();
         
         // Go to order confirmation page
         goto(`/order/confirmation/${order._id}`);
@@ -372,6 +457,31 @@
       }
     }
     
+    // Add new payment method button handler
+    function togglePaymentForm() {
+    // If we're already showing the form, clean up first
+    if (showPaymentForm) {
+        if (stripeService.cardElement) {
+        try {
+            stripeService.cardElement.unmount();
+            stripeService.cardElement = null;
+        } catch (e) {
+            console.log("Error unmounting card element:", e);
+        }
+        }
+    }
+    
+    // Toggle the form visibility
+    showPaymentForm = !showPaymentForm;
+    
+    // If we're now showing the form, set up the card element after a small delay
+    if (showPaymentForm) {
+        setTimeout(() => {
+        setupCardElement();
+        }, 100);
+    }
+    }
+
     function cancelCheckout() {
       goto('/cart');
     }
@@ -734,9 +844,7 @@
                 {/if}
                 
                 <!-- Add new payment method button -->
-                <button 
-                  on:click={() => showPaymentForm = !showPaymentForm}
-                  class="text-pink-500 flex items-center"
+                <button on:click={togglePaymentForm} class="text-pink-500 flex items-center">
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -768,8 +876,8 @@
                           class="p-2 border rounded min-h-[40px] bg-white focus:outline-none focus:ring-1 focus:ring-pink-400"
                         >
                           <!-- Stripe Card Element will be inserted here -->
-                          {#if !stripe}
-                            <div class="text-gray-500 text-sm p-1">Loading payment form...</div>
+                          {#if !stripeService.isInitialized}
+                          <div class="text-gray-500 text-sm p-1">Loading payment form...</div>
                           {/if}
                         </div>
                         <div id="card-errors" class="text-red-500 text-sm mt-1"></div>

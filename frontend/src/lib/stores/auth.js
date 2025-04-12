@@ -232,6 +232,30 @@ function createAuthStore() {
   };
 }
 
+// Add to the authStore object
+refreshUserData: async () => {
+  try {
+    update(state => ({ ...state, isLoading: true, error: null }));
+    
+    const { data } = await authAPI.getCurrentUser();
+    
+    update(state => ({
+      ...state,
+      user: data,
+      isLoading: false
+    }));
+    
+    return true;
+  } catch (error) {
+    update(state => ({
+      ...state,
+      isLoading: false,
+      error: error.message
+    }));
+    return false;
+  }
+}
+
 // Helper function to generate random guest ID
 function generateGuestId() {
   return Math.random().toString(36).substring(2, 15) + 
