@@ -180,8 +180,8 @@
       
       <!-- Success message for adding to cart -->
       {#if addToCartSuccess}
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
-          <span>Product added to cart successfully!</span>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center fixed top-0 left-1/2 transform -translate-x-1/2 z-50">
+          <span>Product added to cart successfully!&nbsp;</span>
           <a href="/cart" class="text-green-700 underline">View Cart</a>
         </div>
       {/if}
