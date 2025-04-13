@@ -27,13 +27,22 @@
   // Methods
   async function updateQuantity(productId, delta) {
     const item = items.find(item => item.productId._id === productId);
+    console.log('Item before update:', item); // Check if the item is found
     if (!item) return;
     
     const newQuantity = item.quantity + delta;
+    console.log('New quantity:', newQuantity); // Log the new quantity
     if (newQuantity > 0) {
       await cartStore.updateQuantity(productId, newQuantity);
     }
   }
+
+  // async function updateQuantity(productId, newQuantity) {
+  //   const itemIndex = this.items.findIndex(item => item.productId._id === productId);
+  //   if (itemIndex !== -1) {
+  //     this.items[itemIndex].quantity = newQuantity;
+  //   }
+  // }
   
   async function toggleSelectItem(productId) {
     const item = items.find(item => item.productId._id === productId);
@@ -60,6 +69,7 @@
   }
   
   async function clearCart() {
+    console.log('Clearing cart...');
     await cartStore.clearCart();
   }
   
@@ -218,7 +228,8 @@
             </div>
             <div class="col-span-3 flex items-center justify-end">
               <button 
-                on:click={() => updateQuantity(item.productId._id, -1)} 
+                on:click={() => {
+                  updateQuantity(item.productId._id, -1)} }
                 class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mx-1"
                 aria-label={`Decrease quantity of ${item.productId.name}`}
               >
