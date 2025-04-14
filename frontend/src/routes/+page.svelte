@@ -108,9 +108,11 @@
   <header class="bg-pink-400 p-4 flex items-center justify-between">
     <div class="flex items-center">
       <h1 class="text-2xl font-bold text-white mr-2">Hot<br>Fridge</h1>
-      <div class="h-12 w-12 bg-green-200 rounded-md flex items-center justify-center text-xs text-gray-600 font-bold">
-        Logo
-      </div>
+      <img 
+        src="/images/logo/logo.png" 
+        alt="Hot Fridge Logo" 
+        class="h-12 w-12 rounded-md"
+      />
     </div>
     
     <div class="flex-1 mx-4">
@@ -383,9 +385,11 @@
         <div class="text-xl font-bold">Hot<br>Fridge</div>
         <div class="text-xs">Fresh produce at the<br>click of a finger</div>
       </div>
-      <div class="h-12 w-12 bg-green-200 rounded-md flex items-center justify-center text-xs text-gray-600 font-bold">
-        Logo
-      </div>
+      <img 
+      src="/images/logo/logo.png" 
+      alt="Hot Fridge Logo" 
+      class="h-12 w-12 rounded-md"
+      />
     </div>
   </footer>
 </div>

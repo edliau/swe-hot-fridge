@@ -47,9 +47,11 @@
       <div class="flex items-center">
         <a href="/" class="flex items-center">
           <h1 class="text-2xl font-bold text-white mr-2">Hot<br>Fridge</h1>
-          <div class="h-12 w-12 bg-green-200 rounded-md flex items-center justify-center text-xs text-gray-600 font-bold">
-            Logo
-          </div>
+          <img 
+          src="/images/logo/logo.png" 
+          alt="Hot Fridge Logo" 
+          class="h-12 w-12 rounded-md"
+        />
         </a>
       </div>
     </header>
