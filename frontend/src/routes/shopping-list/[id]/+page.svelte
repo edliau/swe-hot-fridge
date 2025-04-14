@@ -6,6 +6,7 @@
     import { authStore } from '$lib/stores/auth';
     import { cartStore } from '$lib/stores/cart';
     import SearchBar from '$lib/components/SearchBar.svelte';
+    import { fuzzySearchProducts } from '$lib/utils/fuzzySearch';
     
     // Get list ID from URL
     const listId = $page.params.id;
@@ -25,6 +26,9 @@
     let isEditMode = false;
     let editItemId = null;
     let editItemQuantity = 1;
+    let allProducts = [];
+    let fuzzySuggestions = [];
+
     
     // Subscribe to auth store
     $: isAuthenticated = $authStore.isAuthenticated;
@@ -35,10 +39,15 @@
     
     onMount(async () => {
       if (!isAuthenticated || !listId) return;
-      
+
       try {
         isLoading = true;
         await loadShoppingList();
+
+        const response = await productsAPI.getProducts({ limit: 1000 }); // or use pagination
+        if (response.success) {
+          allProducts = response.data;
+        }
       } catch (error) {
         console.error('Error:', error);
         errorMessage = error.message || 'An error occurred';
@@ -116,22 +125,19 @@
     async function searchProducts() {
       if (!searchTerm.trim()) {
         searchResults = [];
+        fuzzySuggestions = [];
         return;
       }
-      
+
       try {
         isSearching = true;
-        
-        const response = await productsAPI.getProducts({ 
-          search: searchTerm,
-          limit: 5
-        });
-        
-        if (response.success) {
-          searchResults = response.data || [];
-        }
+
+        const { matches, suggestions } = fuzzySearchProducts(searchTerm.trim(), allProducts);
+        searchResults = matches;
+        fuzzySuggestions = suggestions;
+
       } catch (error) {
-        console.error('Error searching products:', error);
+        console.error('Error during fuzzy search:', error);
       } finally {
         isSearching = false;
       }
