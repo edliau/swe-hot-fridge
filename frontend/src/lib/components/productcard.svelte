@@ -1,24 +1,27 @@
 <script>
-  export let product;
-  export let onAddToCart = () => {};
-  export let onViewProduct = () => {};
+  import { createEventDispatcher } from 'svelte';
 
-  // Handle card click while preventing click from triggering on the add to cart button
+  export let product;
+  const dispatch = createEventDispatcher();
+
   const handleCardClick = () => {
-    onViewProduct(product._id);
+    if (product && product._id) {
+      dispatch('viewProduct', product._id);
+    } else {
+      console.error('Product ID is missing or invalid');
+    }
   };
 
-  // Stop propagation to prevent triggering the card click when clicking the add to cart button
   const handleAddToCartClick = (event) => {
-    event.stopPropagation();
-    onAddToCart(product._id);
+    event.stopPropagation(); // ✅ Prevents the card click
+    dispatch('addToCart', product._id);
   };
 </script>
 
 <div 
   class="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
   on:click={handleCardClick}
-  on:keydown={(e) => e.key === 'Enter' && handleCardClick()}
+  on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick()}
   tabindex="0"
   role="button"
   aria-label={`View ${product.name} details`}

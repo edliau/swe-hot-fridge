@@ -6,8 +6,9 @@
     import { cartStore } from '$lib/stores/cart';
     import { authStore } from '$lib/stores/auth';
     import { favouritesAPI } from '$lib/api';
-    
-    const productId = $page.params.id;
+    import { get } from 'svelte/store';
+
+    const productId = get(page).params.id;
     let product = null;
     let isLoading = true;
     let errorMessage = '';

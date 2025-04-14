@@ -6,12 +6,17 @@
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { productsAPI } from '$lib/api';
   import { fuzzySearchProducts } from '$lib/utils/fuzzySearch';
+  import { cartStore } from '$lib/stores/cart';
+  import {fade} from 'svelte/transition';
 
   let searchQuery = '';
   let searchResults = [];
   let suggestedProducts = [];
   let altSuggestions = [];
   let isLoading = true;
+  let addToCartSuccess = false;
+  let addToCartTimer;
+  let isAddingToCart = false;
 
   $: query = $page.url.searchParams.get('q');
   $: isAuthenticated = $authStore.isAuthenticated;
@@ -21,13 +26,37 @@
     goto(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   }
 
+  async function handleAddToCart(productId) {
+    try {
+      isAddingToCart = true;
+      const success = await cartStore.addItem(productId, 1);
+
+      if (success) {
+        addToCartSuccess = true;
+
+        if (addToCartTimer) clearTimeout(addToCartTimer);
+
+        addToCartTimer = setTimeout(() => {
+          addToCartSuccess = false;
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Failed to add product to cart:', error);
+    } finally {
+      isAddingToCart = false;
+    }
+  }
+
+  function handleViewProduct(productId) {
+    goto(`/product/${productId}`);
+  }
+
   onMount(async () => {
     isLoading = true;
     searchQuery = query;
 
     try {
       const allProducts = (await productsAPI.getProducts({ limit: 1000 })).data || [];
-
 
       if (query && query.trim()) {
         const { matches, suggestions } = fuzzySearchProducts(query, allProducts);
@@ -64,12 +93,12 @@
   </div>
 
   <div class="flex-1 mx-4">
-    <form on:submit|preventDefault={handleSearch}>
+    <form on:submit|preventDefault>
       <div class="relative">
         <input
           type="text"
           bind:value={searchQuery}
-          placeholder="Search for product"
+          placeholder="Search your favourites"
           class="w-full rounded-full py-2 px-10 border-2 border-gray-300 focus:outline-none"
         />
         <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
@@ -100,19 +129,31 @@
   </div>
 </header>
 
-<!-- Divider -->
 <div class="h-2 bg-gradient-to-r from-cyan-400 via-lime-300 to-yellow-200"></div>
 
-<!-- MAIN SEARCH CONTENT -->
 <main class="p-6 bg-white min-h-[calc(100vh-200px)]">
   <h2 class="text-2xl font-bold mb-6">Search Results for: "{searchQuery}"</h2>
+  {#if addToCartSuccess}
+    <div
+      in:fade={{ duration: 150, delay: 0 }}
+      out:fade={{ duration: 150 }}
+      class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center fixed top-5 left-1/2 transform -translate-x-1/2 z-50 shadow-lg w-[90%] max-w-md"
+    >
+      <span class="text-sm">Product added to cart successfully!</span>
+      <a href="/cart" class="ml-4 text-green-700 underline text-sm">View Cart</a>
+    </div>
+  {/if}
 
   {#if isLoading}
     <div class="text-center text-gray-500">Loading...</div>
   {:else if searchResults.length > 0}
     <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
       {#each searchResults as product}
-        <ProductCard {product} />
+        <ProductCard 
+          {product} 
+          on:viewProduct={(e) => handleViewProduct(e.detail)} 
+          on:addToCart={(e) => handleAddToCart(e.detail)} 
+        />
       {/each}
     </div>
   {:else}
@@ -137,7 +178,11 @@
       <p class="mt-6 font-semibold">You may like:</p>
       <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-6">
         {#each suggestedProducts as product}
-          <ProductCard {product} />
+          <ProductCard 
+            {product} 
+            on:viewProduct={(e) => handleViewProduct(e.detail)} 
+            on:addToCart={(e) => handleAddToCart(e.detail)} 
+          />
         {/each}
       </div>
     </div>

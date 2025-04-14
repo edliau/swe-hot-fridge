@@ -3,6 +3,10 @@
   import { authStore } from '$lib/stores/auth';
   import { favouritesAPI } from '$lib/api';
   import ProductCard from '$lib/components/ProductCard.svelte';
+  import { cartStore } from '$lib/stores/cart'; // assuming you're using a cart store
+  import { goto } from '$app/navigation';
+  import { fade } from 'svelte/transition';
+
 
   let favouriteItems = [];
   let filteredFavourites = [];
@@ -10,6 +14,8 @@
   let isLoading = true;
   let errorMessage = '';
   let isAuthenticated;
+  let addToCartSuccess = false;
+  let addToCartTimer;
 
   $: isAuthenticated = $authStore.isAuthenticated;
 
@@ -33,6 +39,18 @@
       isLoading = false;
     }
   });
+  function handleAddToCart(productId) {
+  cartStore.addItem(productId);
+  addToCartSuccess = true;
+
+  // Clear any existing timer
+  if (addToCartTimer) clearTimeout(addToCartTimer);
+
+  // Hide popup after 3 seconds
+  addToCartTimer = setTimeout(() => {
+    addToCartSuccess = false;
+  }, 3000);
+}
 </script>
 
 <svelte:head>
@@ -103,7 +121,12 @@
   {:else if filteredFavourites.length > 0}
     <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
       {#each filteredFavourites as item}
-        <ProductCard product={item.productId} favouriteId={item._id} />
+        <ProductCard 
+          product={item.productId} 
+          favouriteId={item._id} 
+          on:viewProduct={(e) => goto(`/product/${e.detail}`)} 
+          on:addToCart={(e) => handleAddToCart(e.detail)} 
+        />
       {/each}
     </div>
   {:else if searchInput.trim() !== ''}
@@ -116,6 +139,16 @@
       <p class="mt-2">
         <a href="/" class="text-pink-500 hover:underline">Browse products</a> and click the heart icon to add to your favourites.
       </p>
+    </div>
+  {/if}
+  {#if addToCartSuccess}
+    <div
+      in:fade={{ duration: 200 }}
+      out:fade={{ duration: 200 }}
+      class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center fixed top-5 left-1/2 transform -translate-x-1/2 z-50 shadow-lg w-[90%] max-w-md"
+    >
+      <span class="text-sm">Product added to cart successfully!</span>
+      <a href="/cart" class="ml-4 text-green-700 underline text-sm">View Cart</a>
     </div>
   {/if}
 </main>
