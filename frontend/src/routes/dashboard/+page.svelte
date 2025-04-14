@@ -235,7 +235,7 @@
     {:else}
       <!-- Welcome section -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between gap-16 mb-4">
           <div>
             <h2 class="text-xl font-bold">Welcome, {user ? user.firstName : 'User'}!</h2>
             <p class="text-gray-600">Manage your orders and shopping lists</p>
