@@ -129,7 +129,7 @@ export const cartAPI = {
 };
 
 // favourites API Service
-export const favoritesAPI = {
+export const favouritesAPI = {
   getfavourites: () => new API().get('/favourites'),
   addTofavourites: (productId) => new API().post('/favourites', { productId }),
   removeFromfavourites: (id) => new API().delete(`/favourites/${id}`),
@@ -162,10 +162,49 @@ export const paymentAPI = {
 // Shopping Lists API Service
 export const shoppingListsAPI = {
   getLists: () => new API().get('/shopping-lists'),
+  
   createList: (listData) => new API().post('/shopping-lists', listData),
-  updateList: (id, listData) => new API().put(`/shopping-lists/${id}`, listData),
+  
+  getList: (id) => new API().get(`/shopping-lists/${id}`),
+  
+  // Enhanced update method to handle structured items with quantities
+  updateList: (id, listData) => {
+    // If listData contains items array with product objects, convert to proper format
+    if (listData.items && Array.isArray(listData.items)) {
+      // Check if the items are in the structured format (with product objects)
+      if (listData.items.some(item => item.product)) {
+        // Convert to the format expected by the API
+        listData.items = listData.items.map(item => ({
+          productId: item.product._id || item.productId,
+          quantity: item.quantity || 1,
+          notes: item.notes || ''
+        }));
+      }
+    }
+    
+    return new API().put(`/shopping-lists/${id}`, listData);
+  },
+  
   deleteList: (id) => new API().delete(`/shopping-lists/${id}`),
-  getListItems: (id) => new API().get(`/shopping-lists/${id}/items`)
+  
+  // Add item to list with quantity
+  addItemToList: (listId, productId, quantity = 1, notes = '') => {
+    return new API().post(`/shopping-lists/${listId}/items`, {
+      productId,
+      quantity,
+      notes
+    });
+  },
+  
+  // Remove item from list
+  removeItemFromList: (listId, productId) => {
+    return new API().delete(`/shopping-lists/${listId}/items/${productId}`);
+  },
+  
+  // Update item quantity
+  updateItemQuantity: (listId, productId, quantity) => {
+    return new API().put(`/shopping-lists/${listId}/items/${productId}`, { quantity });
+  }
 };
 
 // Export a default API instance

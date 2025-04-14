@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { authStore } from '$lib/stores/auth';
-    import { favoritesAPI } from '$lib/api';
+    import { favouritesAPI } from '$lib/api';
     import ProductCard from '$lib/components/ProductCard.svelte';
   
     let favouriteProducts = [];
