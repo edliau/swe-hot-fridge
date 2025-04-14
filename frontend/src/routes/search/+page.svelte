@@ -10,7 +10,6 @@
   import {fade} from 'svelte/transition';
   import SearchBar from '$lib/components/SearchBar.svelte';
 
-  let searchQuery = '';
   let searchResults = [];
   let suggestedProducts = [];
   let altSuggestions = [];
@@ -18,13 +17,16 @@
   let addToCartSuccess = false;
   let addToCartTimer;
   let isAddingToCart = false;
+  let searchKey = 0;
 
-  $: query = $page.url.searchParams.get('q');
+  // Get the current search query from URL
+  $: query = $page.url.searchParams.get('q') || '';
   $: isAuthenticated = $authStore.isAuthenticated;
-
-  function handleSearch() {
-    if (!searchQuery.trim()) return;
-    goto(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  
+  // Update both searchKey and trigger search when query changes
+  $: if (query !== undefined) {
+    searchKey += 1;
+    fetchSearchResults(query);
   }
 
   async function handleAddToCart(productId) {
@@ -52,19 +54,21 @@
     goto(`/product/${productId}`);
   }
 
-  onMount(async () => {
+  async function fetchSearchResults(searchTerm) {
     isLoading = true;
-    searchQuery = query;
-
+    
     try {
       const allProducts = (await productsAPI.getProducts({ limit: 1000 })).data || [];
-
-      if (query && query.trim()) {
-        const { matches, suggestions } = fuzzySearchProducts(query, allProducts);
+      
+      if (searchTerm && searchTerm.trim()) {
+        const { matches, suggestions } = fuzzySearchProducts(searchTerm, allProducts);
         searchResults = matches;
         altSuggestions = suggestions;
+      } else {
+        searchResults = [];
+        altSuggestions = [];
       }
-
+      
       if (searchResults.length === 0) {
         suggestedProducts = allProducts.slice(0, 4);
       }
@@ -73,6 +77,11 @@
     } finally {
       isLoading = false;
     }
+  }
+  
+  onMount(() => {
+    // Initial load
+    fetchSearchResults(query);
   });
 </script>
 
@@ -94,8 +103,8 @@
   </div>
 
   <div class="flex-1 mx-4">
-    <SearchBar />
-  </div> 
+    <SearchBar key={searchKey} />
+  </div>
 
   <div class="flex items-center">
     <a href="/account" class="mx-2" aria-label="Account">
@@ -119,7 +128,7 @@
 <div class="h-2 bg-gradient-to-r from-cyan-400 via-lime-300 to-yellow-200"></div>
 
 <main class="p-6 bg-white min-h-[calc(100vh-200px)]">
-  <h2 class="text-2xl font-bold mb-6">Search Results for: "{searchQuery}"</h2>
+  <h2 class="text-2xl font-bold mb-6">Search Results for: "{query}"</h2>
   {#if addToCartSuccess}
     <div
       in:fade={{ duration: 150, delay: 0 }}
@@ -145,7 +154,7 @@
     </div>
   {:else}
     <div class="text-center text-gray-500">
-      <p>No products found for "{searchQuery}".</p>
+      <p>No products found for "{query}".</p>
 
       {#if altSuggestions.length > 0}
         <p class="mt-2 text-sm text-gray-600 italic">
