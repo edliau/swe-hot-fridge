@@ -108,7 +108,9 @@ function createCartStore() {
 
 				update((state) => ({
 					...state,
-					items: state.items.filter((item) => item.productId.toString() !== productId.toString()),
+					items: state.items.filter((item) => {
+						return item.productId.id.toString() !== productId.toString();
+					}),
 					isLoading: false
 				}));
 

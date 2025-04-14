@@ -21,7 +21,7 @@
     onMount(async () => {
       try {
         isLoading = true;
-        const res = await favoritesAPI.getFavorites();
+        const res = await favouritesAPI.getfavourites();
         favouriteProducts = res.data || [];
       } catch (e) {
         errorMessage = 'Could not load favourites.';
