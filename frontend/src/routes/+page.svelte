@@ -4,6 +4,7 @@
   import { productsAPI, categoriesAPI, promotionsAPI } from '$lib/api';
   import { cartStore } from '$lib/stores/cart';
   import { authStore } from '$lib/stores/auth';
+  import SearchBar from '$lib/components/SearchBar.svelte';
   
   // State variables
   let searchQuery = '';
@@ -116,23 +117,8 @@
     </div>
     
     <div class="flex-1 mx-4">
-      <form on:submit|preventDefault={handleSearch}>
-        <div class="relative">
-          <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Search for product"
-            class="w-full rounded-full py-2 px-10 border-2 border-gray-300 focus:outline-none"
-          />
-          <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <button type="submit" class="hidden">Search</button>
-        </div>
-      </form>
-    </div>
+      <SearchBar />
+    </div>   
     
     <div class="flex items-center">
       <a href="/account" class="mx-2" aria-label="User account">

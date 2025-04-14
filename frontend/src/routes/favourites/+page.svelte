@@ -6,6 +6,9 @@
   import { cartStore } from '$lib/stores/cart'; // assuming you're using a cart store
   import { goto } from '$app/navigation';
   import { fade } from 'svelte/transition';
+  import SearchBar from '$lib/components/SearchBar.svelte';
+  import { fuzzySearchProducts } from '$lib/utils/fuzzySearch';
+
 
 
   let favouriteItems = [];
@@ -20,9 +23,18 @@
   $: isAuthenticated = $authStore.isAuthenticated;
 
   // Filter the favourites as the user types
-  $: filteredFavourites = favouriteItems.filter(item =>
-    item.productId?.name?.toLowerCase().includes(searchInput.toLowerCase())
-  );
+  $: {
+    if (searchInput.trim()) {
+      const allProducts = favouriteItems.map(item => item.productId);
+      const { matches } = fuzzySearchProducts(searchInput, allProducts);
+      filteredFavourites = matches.map(product =>
+        favouriteItems.find(item => item.productId._id === product._id)
+      ).filter(Boolean);
+    } else {
+      filteredFavourites = favouriteItems;
+    }
+  }
+
 
   onMount(async () => {
     try {
@@ -71,22 +83,8 @@
   </div>
 
   <div class="flex-1 mx-4">
-    <form on:submit|preventDefault>
-      <div class="relative">
-        <input
-          type="text"
-          bind:value={searchInput}
-          placeholder="Search your favourites"
-          class="w-full rounded-full py-2 px-10 border-2 border-gray-300 focus:outline-none"
-        />
-        <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-      </div>
-    </form>
-  </div>
+    <SearchBar />
+  </div> 
 
   <div class="flex items-center">
     <a href="/account" class="mx-2" aria-label="Account">
@@ -113,6 +111,14 @@
 <!-- MAIN CONTENT -->
 <main class="p-6 bg-white min-h-[calc(100vh-200px)]">
   <h2 class="text-2xl font-bold mb-6">My Favourites</h2>
+  <div class="mb-6 max-w-md">
+    <input
+      type="text"
+      bind:value={searchInput}
+      placeholder="Search within favourites"
+      class="w-full rounded-full py-2 px-5 border-2 border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+    />
+  </div>  
 
   {#if isLoading}
     <div class="text-center text-gray-500">Loading...</div>

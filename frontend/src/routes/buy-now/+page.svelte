@@ -4,6 +4,7 @@
     import { page } from '$app/stores';
     import { productsAPI } from '$lib/api';
     import { cartStore } from '$lib/stores/cart';
+    import SearchBar from '$lib/components/SearchBar.svelte';
     
     let productId = $page.url.searchParams.get('product');
     let quantity = parseInt($page.url.searchParams.get('quantity') || '1');
@@ -54,6 +55,9 @@
         />
         </a>
       </div>
+      <div class="flex-1 mx-4">
+        <SearchBar />
+      </div>  
     </header>
     
     <!-- Colorful divider -->
