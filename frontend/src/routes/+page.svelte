@@ -13,6 +13,8 @@
   let featuredProducts = [];
   let isLoading = true;
   let errorMessage = '';
+  let isAddingToCart = false;
+  let addToCartSuccess = false;
   
   // Auth state
   $: isAuthenticated = $authStore.isAuthenticated;
@@ -65,17 +67,26 @@
     // Redirect to search page with query parameter
     goto(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   }
-  
-  // Add product to cart
-  async function addToCart(productId) {
-    try {
-      await cartStore.addItem(productId, 1);
-      // Could show a toast notification here
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      errorMessage = 'Failed to add product to cart. Please try again.';
+
+    // Handle Add to Cart action
+    async function addToCart(productId) {
+      try {
+        isAddingToCart = true;
+        const success = await cartStore.addItem(productId, 1);
+        
+        if (success) {
+          addToCartSuccess = true;
+          setTimeout(() => {
+            addToCartSuccess = false;
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        errorMessage = error.message || 'Failed to add product to cart';
+      } finally {
+        isAddingToCart = false;
+      }
     }
-  }
   
   // Navigate to category page
   function viewCategory(categoryId) {
@@ -299,6 +310,14 @@
               </div>
             {/each}
           </div>
+        </div>
+      {/if}
+
+      <!-- Success message for adding to cart -->
+      {#if addToCartSuccess}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center fixed top-0 left-1/2 transform -translate-x-1/2 z-50">
+          <span>Product added to cart successfully!&nbsp;</span>
+          <a href="/cart" class="text-green-700 underline">View Cart</a>
         </div>
       {/if}
       
