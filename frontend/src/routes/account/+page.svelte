@@ -13,7 +13,7 @@
   $: isLoggedIn = $authStore.isAuthenticated;
   $: user = $authStore.user;
   $: if (isLoggedIn) {
-    goto('/favourites');
+    goto('/dashboard');
   }
   
   $: if ($authStore.error) {
