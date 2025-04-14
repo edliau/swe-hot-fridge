@@ -8,6 +8,7 @@ const asyncHandler = require('../middleware/async');
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
+// controllers/authController.js - Fixed register function
 exports.register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, role } = req.body;
 
@@ -19,7 +20,7 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   // Create user with role if provided (and authorized)
   // Check if the request is coming from an admin user who can set roles
-  const userRole = req.user && req.user.role === 'admin' ? role || 'user' : 'user';
+  const userRole = req.user && req.user.role === 'admin' ? role || 'customer' : 'customer';
   
   const user = await User.create({
     firstName,

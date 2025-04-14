@@ -129,7 +129,7 @@ export const cartAPI = {
 };
 
 // favourites API Service
-export const favouritesAPI = {
+export const favoritesAPI = {
   getfavourites: () => new API().get('/favourites'),
   addTofavourites: (productId) => new API().post('/favourites', { productId }),
   removeFromfavourites: (id) => new API().delete(`/favourites/${id}`),
@@ -157,6 +157,15 @@ export const orderAPI = {
 // Payment API Service
 export const paymentAPI = {
   createPaymentIntent: (paymentData) => new API().post('/payments/create-payment-intent', paymentData)
+};
+
+// Shopping Lists API Service
+export const shoppingListsAPI = {
+  getLists: () => new API().get('/shopping-lists'),
+  createList: (listData) => new API().post('/shopping-lists', listData),
+  updateList: (id, listData) => new API().put(`/shopping-lists/${id}`, listData),
+  deleteList: (id) => new API().delete(`/shopping-lists/${id}`),
+  getListItems: (id) => new API().get(`/shopping-lists/${id}/items`)
 };
 
 // Export a default API instance

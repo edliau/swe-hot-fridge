@@ -10,7 +10,8 @@ const initialState = {
   isGuest: true,
   guestId: null,
   isLoading: true,
-  error: null
+  error: null,
+  message: null
 };
 
 function createAuthStore() {
@@ -118,7 +119,7 @@ function createAuthStore() {
         update(state => ({
           ...state,
           isLoading: false,
-          error: error.message
+          error: error.message || 'Login failed. Please try again.'
         }));
         return false;
       }
@@ -136,7 +137,7 @@ function createAuthStore() {
           update(state => ({
             ...state,
             isLoading: false,
-            message: 'Verification email sent. Please check your inbox.'
+            message: 'Verification email sent. Please check your inbox and verify your account before logging in.'
           }));
           return true;
         }
@@ -167,6 +168,12 @@ function createAuthStore() {
             isLoading: false,
             error: null
           });
+        } else {
+          update(state => ({
+            ...state,
+            isLoading: false,
+            message: 'Registration successful! You may now log in.'
+          }));
         }
         
         return true;
@@ -174,7 +181,7 @@ function createAuthStore() {
         update(state => ({
           ...state,
           isLoading: false,
-          error: error.message
+          error: error.message || 'Registration failed. Please try again.'
         }));
         return false;
       }
@@ -219,7 +226,103 @@ function createAuthStore() {
         update(state => ({
           ...state,
           isLoading: false,
-          error: error.message
+          error: error.message || 'Failed to update profile'
+        }));
+        return false;
+      }
+    },
+    
+    // Update password
+    updatePassword: async (passwordData) => {
+      try {
+        update(state => ({ ...state, isLoading: true, error: null }));
+        
+        await authAPI.updatePassword(passwordData);
+        
+        update(state => ({
+          ...state,
+          isLoading: false,
+          message: 'Password updated successfully'
+        }));
+        
+        return true;
+      } catch (error) {
+        update(state => ({
+          ...state,
+          isLoading: false,
+          error: error.message || 'Failed to update password'
+        }));
+        return false;
+      }
+    },
+    
+    // Forgot password
+    forgotPassword: async (email) => {
+      try {
+        update(state => ({ ...state, isLoading: true, error: null }));
+        
+        await authAPI.forgotPassword(email);
+        
+        update(state => ({
+          ...state,
+          isLoading: false,
+          message: 'Password reset instructions sent to your email'
+        }));
+        
+        return true;
+      } catch (error) {
+        update(state => ({
+          ...state,
+          isLoading: false,
+          error: error.message || 'Failed to process password reset'
+        }));
+        return false;
+      }
+    },
+    
+    // Reset password
+    resetPassword: async (token, password) => {
+      try {
+        update(state => ({ ...state, isLoading: true, error: null }));
+        
+        await authAPI.resetPassword(token, password);
+        
+        update(state => ({
+          ...state,
+          isLoading: false,
+          message: 'Password has been reset successfully'
+        }));
+        
+        return true;
+      } catch (error) {
+        update(state => ({
+          ...state,
+          isLoading: false,
+          error: error.message || 'Failed to reset password'
+        }));
+        return false;
+      }
+    },
+    
+    // Refresh user data
+    refreshUserData: async () => {
+      try {
+        update(state => ({ ...state, isLoading: true, error: null }));
+        
+        const { data } = await authAPI.getCurrentUser();
+        
+        update(state => ({
+          ...state,
+          user: data,
+          isLoading: false
+        }));
+        
+        return true;
+      } catch (error) {
+        update(state => ({
+          ...state,
+          isLoading: false,
+          error: error.message || 'Failed to refresh user data'
         }));
         return false;
       }
@@ -228,32 +331,13 @@ function createAuthStore() {
     // Clear error
     clearError: () => {
       update(state => ({ ...state, error: null }));
+    },
+    
+    // Clear message
+    clearMessage: () => {
+      update(state => ({ ...state, message: null }));
     }
   };
-}
-
-// Add to the authStore object
-refreshUserData: async () => {
-  try {
-    update(state => ({ ...state, isLoading: true, error: null }));
-    
-    const { data } = await authAPI.getCurrentUser();
-    
-    update(state => ({
-      ...state,
-      user: data,
-      isLoading: false
-    }));
-    
-    return true;
-  } catch (error) {
-    update(state => ({
-      ...state,
-      isLoading: false,
-      error: error.message
-    }));
-    return false;
-  }
 }
 
 // Helper function to generate random guest ID
