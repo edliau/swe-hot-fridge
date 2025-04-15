@@ -264,7 +264,7 @@
             {/if}
             
             {#if product.image}
-              <div class="mt-3 text-center text-sm text-gray-500">
+              <div class="mt-6 text-center text-sm text-gray-500">
                 {zoomActive ? 'Click to exit zoom' : 'Click to zoom in'}
               </div>
             {/if}
