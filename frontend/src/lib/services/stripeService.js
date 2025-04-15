@@ -1,4 +1,5 @@
-// frontend/src/lib/services/stripeService.js
+// frontend/src/lib/services/stripeService.js - Fixed version
+
 import { browser } from '$app/environment';
 
 /**
@@ -10,6 +11,7 @@ class StripeService {
     this.elements = null;
     this.cardElement = null;
     this.isInitialized = false;
+    this.hasCreatedElement = false; // Track if we've already created an element
   }
 
   /**
@@ -66,14 +68,7 @@ class StripeService {
     }
     
     // Clean up any existing card element first
-    if (this.cardElement) {
-      try {
-        this.cardElement.unmount();
-      } catch (e) {
-        console.log("Unmounting previous card element failed:", e);
-      }
-      this.cardElement = null;
-    }
+    this.cleanup();
     
     // Initialize elements if not already done
     if (!this.elements) {
@@ -102,18 +97,52 @@ class StripeService {
     // Merge default options with provided options
     const cardOptions = { ...defaultOptions, ...options };
     
-    // Create the card element
-    this.cardElement = this.elements.create('card', cardOptions);
-    
-    // Mount the card element to the DOM
-    const domElement = document.getElementById(elementId);
-    if (domElement) {
-      this.cardElement.mount(`#${elementId}`);
-    } else {
-      console.error(`Element with ID "${elementId}" not found`);
+    try {
+      // Create the card element
+      console.log('Creating new card element');
+      this.cardElement = this.elements.create('card', cardOptions);
+      this.hasCreatedElement = true;
+      
+      // Mount the card element to the DOM
+      const domElement = document.getElementById(elementId);
+      if (domElement) {
+        this.cardElement.mount(`#${elementId}`);
+        console.log('Card element mounted successfully');
+      } else {
+        console.error(`Element with ID "${elementId}" not found`);
+      }
+      
+      return this.cardElement;
+    } catch (error) {
+      console.error('Error creating card element:', error);
+      // If we get the "can only create one Element" error, we need to destroy and recreate elements
+      if (error.message && error.message.includes('Can only create one Element')) {
+        console.log('Attempting to recover from "Can only create one Element" error');
+        this.destroyElements();
+        // Now try again with fresh elements
+        this.elements = this.stripe.elements();
+        this.cardElement = this.elements.create('card', cardOptions);
+        this.hasCreatedElement = true;
+        
+        const domElement = document.getElementById(elementId);
+        if (domElement) {
+          this.cardElement.mount(`#${elementId}`);
+          console.log('Card element mounted successfully after recovery');
+        }
+        return this.cardElement;
+      }
+      throw error;
     }
-    
-    return this.cardElement;
+  }
+
+  /**
+   * Completely destroy and reset elements
+   */
+  destroyElements() {
+    this.cleanup();
+    // Force elements to be recreated
+    this.elements = null;
+    this.hasCreatedElement = false;
   }
 
   /**
@@ -145,6 +174,12 @@ class StripeService {
     // Merge default data with provided data
     const data = { ...defaultData, ...paymentData };
     
+    console.log('Confirming card payment with:', {
+      clientSecret: clientSecret ? '...present...' : 'missing',
+      paymentMethod: data.payment_method ? 'present' : 'missing',
+      setupFutureUsage: data.setup_future_usage || 'not specified'
+    });
+    
     // Confirm the payment
     return await this.stripe.confirmCardPayment(clientSecret, data);
   }
@@ -164,6 +199,7 @@ class StripeService {
       throw new Error('Payment method ID is required');
     }
     
+    console.log(`Confirming payment with existing method: ${paymentMethodId}`);
     return await this.stripe.confirmCardPayment(clientSecret, {
       payment_method: paymentMethodId
     });
@@ -175,7 +211,8 @@ class StripeService {
    */
   listenForCardElementErrors(callback) {
     if (!this.cardElement) {
-      throw new Error('Card element not initialized');
+      console.warn('Card element not initialized, cannot listen for errors');
+      return;
     }
     
     this.cardElement.on('change', (event) => {
@@ -187,14 +224,50 @@ class StripeService {
    * Clean up resources
    */
   cleanup() {
+    console.log('Cleaning up Stripe resources');
     if (this.cardElement) {
       try {
         this.cardElement.unmount();
+        console.log('Card element unmounted successfully');
       } catch (e) {
         console.log('Error unmounting card element:', e);
       }
       this.cardElement = null;
+      // Don't set hasCreatedElement to false here, as we need to remember 
+      // that we've created an element for error recovery purposes
     }
+  }
+  
+  /**
+   * Create a payment method directly
+   * @param {Object} cardData - Card details and billing information
+   * @returns {Promise<Object>} - The created payment method
+   */
+  async createPaymentMethod(cardData) {
+    if (!this.isInitialized || !this.stripe) {
+      throw new Error('Stripe not initialized');
+    }
+    
+    if (!this.cardElement && !cardData.card) {
+      throw new Error('Card element or card data is required');
+    }
+    
+    const paymentMethodData = {
+      type: 'card',
+      card: this.cardElement || cardData.card
+    };
+    
+    if (cardData.billing_details) {
+      paymentMethodData.billing_details = cardData.billing_details;
+    }
+    
+    console.log('Creating payment method with:', {
+      type: paymentMethodData.type,
+      hasCard: !!paymentMethodData.card,
+      hasBillingDetails: !!paymentMethodData.billing_details
+    });
+    
+    return await this.stripe.createPaymentMethod(paymentMethodData);
   }
 }
 
