@@ -29,8 +29,11 @@ class API {
 		};
 
 		try {
-      console.log(`API Request: ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : null);
-      
+			console.log(
+				`API Request: ${options.method || 'GET'} ${endpoint}`,
+				options.body ? JSON.parse(options.body) : null
+			);
+
 			const response = await fetch(`${API_URL}${endpoint}`, config);
 
 			// Handle non-JSON responses
@@ -45,11 +48,11 @@ class API {
 			const data = await response.json();
 
 			if (!response.ok) {
-        console.error('API Error Response:', data);
+				console.error('API Error Response:', data);
 				throw new Error(data.error || data.message || 'Something went wrong');
 			}
 
-      console.log(`API Response: ${options.method || 'GET'} ${endpoint}`, data);
+			console.log(`API Response: ${options.method || 'GET'} ${endpoint}`, data);
 			return data;
 		} catch (error) {
 			console.error('API Error:', error);
@@ -123,21 +126,21 @@ export const productsAPI = {
 
 // Category API Service
 export const categoryAPI = {
-	getAllCategories: () => new API().get('/categories'),
+	getCategories: () => new API().get('/categories'),
 	getCategoryById: (id) => new API().get(`/categories/${id}`),
 	getProductsByCategory: (categoryId, params = {}) => {
-	  const queryParams = new URLSearchParams();
-	  Object.entries(params).forEach(([key, value]) => {
-		if (value !== undefined && value !== null) {
-		  queryParams.append(key, value);
-		}
-	  });
-	  return new API().get(`/categories/${categoryId}/products?${queryParams.toString()}`);
+		const queryParams = new URLSearchParams();
+		Object.entries(params).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				queryParams.append(key, value);
+			}
+		});
+		return new API().get(`/categories/${categoryId}/products?${queryParams.toString()}`);
 	},
 	createCategory: (data) => new API().post('/categories', data),
 	updateCategory: (id, data) => new API().put(`/categories/${id}`, data),
 	deleteCategory: (id) => new API().delete(`/categories/${id}`)
-  };
+};
 
 // Cart API Service
 export const cartAPI = {
@@ -156,11 +159,6 @@ export const favouritesAPI = {
 	addTofavourites: (productId) => new API().post('/favourites', { productId }),
 	removeFromfavourites: (id) => new API().delete(`/favourites/${id}`),
 	checkfavourite: (productId) => new API().get(`/favourites/check/${productId}`)
-};
-
-// Categories API Service
-export const categoriesAPI = {
-	getCategories: () => new API().get('/categories')
 };
 
 // Promotions API Service
@@ -206,50 +204,50 @@ export const paymentAPI = {
 
 // Shopping Lists API Service
 export const shoppingListsAPI = {
-  getLists: () => new API().get('/shopping-lists'),
-  
-  createList: (listData) => new API().post('/shopping-lists', listData),
-  
-  getList: (id) => new API().get(`/shopping-lists/${id}`),
-  
-  // Enhanced update method to handle structured items with quantities
-  updateList: (id, listData) => {
-    // If listData contains items array with product objects, convert to proper format
-    if (listData.items && Array.isArray(listData.items)) {
-      // Check if the items are in the structured format (with product objects)
-      if (listData.items.some(item => item.product)) {
-        // Convert to the format expected by the API
-        listData.items = listData.items.map(item => ({
-          productId: item.product._id || item.productId,
-          quantity: item.quantity || 1,
-          notes: item.notes || ''
-        }));
-      }
-    }
-    
-    return new API().put(`/shopping-lists/${id}`, listData);
-  },
-  
-  deleteList: (id) => new API().delete(`/shopping-lists/${id}`),
-  
-  // Add item to list with quantity
-  addItemToList: (listId, productId, quantity = 1, notes = '') => {
-    return new API().post(`/shopping-lists/${listId}/items`, {
-      productId,
-      quantity,
-      notes
-    });
-  },
-  
-  // Remove item from list
-  removeItemFromList: (listId, productId) => {
-    return new API().delete(`/shopping-lists/${listId}/items/${productId}`);
-  },
-  
-  // Update item quantity
-  updateItemQuantity: (listId, productId, quantity) => {
-    return new API().put(`/shopping-lists/${listId}/items/${productId}`, { quantity });
-  }
+	getLists: () => new API().get('/shopping-lists'),
+
+	createList: (listData) => new API().post('/shopping-lists', listData),
+
+	getList: (id) => new API().get(`/shopping-lists/${id}`),
+
+	// Enhanced update method to handle structured items with quantities
+	updateList: (id, listData) => {
+		// If listData contains items array with product objects, convert to proper format
+		if (listData.items && Array.isArray(listData.items)) {
+			// Check if the items are in the structured format (with product objects)
+			if (listData.items.some((item) => item.product)) {
+				// Convert to the format expected by the API
+				listData.items = listData.items.map((item) => ({
+					productId: item.product._id || item.productId,
+					quantity: item.quantity || 1,
+					notes: item.notes || ''
+				}));
+			}
+		}
+
+		return new API().put(`/shopping-lists/${id}`, listData);
+	},
+
+	deleteList: (id) => new API().delete(`/shopping-lists/${id}`),
+
+	// Add item to list with quantity
+	addItemToList: (listId, productId, quantity = 1, notes = '') => {
+		return new API().post(`/shopping-lists/${listId}/items`, {
+			productId,
+			quantity,
+			notes
+		});
+	},
+
+	// Remove item from list
+	removeItemFromList: (listId, productId) => {
+		return new API().delete(`/shopping-lists/${listId}/items/${productId}`);
+	},
+
+	// Update item quantity
+	updateItemQuantity: (listId, productId, quantity) => {
+		return new API().put(`/shopping-lists/${listId}/items/${productId}`, { quantity });
+	}
 };
 
 // Export a default API instance
