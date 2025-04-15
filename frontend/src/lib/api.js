@@ -243,5 +243,15 @@ export const shoppingListsAPI = {
 	}
 };
 
+export const addressListAPI = {
+	getAddresses: (userId) => new API().get(`/addresses/users/${userId}`),
+
+	createAddress: (addressData) => new API().post('/addresses', addressData),
+
+	updateAddress: (addressId, addressData) => new API().put(`/addresses/${addressId}`, addressData),
+
+	deleteAddress: (addressId) => new API().delete(`/addresses/${addressId}`)
+};
+
 // Export a default API instance
 export default new API();

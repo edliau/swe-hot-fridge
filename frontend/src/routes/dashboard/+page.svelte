@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth';
-  import { shoppingListsAPI } from '$lib/api';
+  import { addressListAPI, shoppingListsAPI } from '$lib/api';
   import SearchBar from '$lib/components/SearchBar.svelte';
   
   // State variables
@@ -17,6 +17,34 @@
   let newListName = '';
   let isCreatingList = false;
   let showNewListForm = false;
+
+
+  let showNewAddressForm = false;
+  let isAddressListsLoading = false;
+  let newStreetAddress = '';
+  let newApartment = '';
+  let newCity = '';
+  let newCountryState = '';
+  let newPostalCode = '';
+  let newCountry = '';
+  let newPhoneNumber = '';
+  let isDefaultAddress = false;
+  let deliveryInstructions = '';
+  let isCreatingAddress = false;
+  let addressLists = [];
+
+  let addressIdToEdit = ''; //may not need
+  let showEditAddressForm = false;
+  let editedStreetAddress = '';
+  let editedApartment = '';
+  let editedCity = '';
+  let editedCountryState = '';
+  let editedPostalCode = '';
+  let editedCountry = '';
+  let editedPhoneNumber = '';
+  let editedDefaultAddress = false;
+  let editedDeliveryInstructions = '';
+  let isEditingAddress = false;
   
   // Subscribe to auth store
   $: isAuthenticated = $authStore.isAuthenticated;
@@ -27,6 +55,15 @@
       goto('/account');
     }
   }
+  $: {
+    if (!$authStore.isLoading && isAuthenticated) {
+      // Fetch data when user is authenticated
+      loadShoppingLists();
+      loadPastOrders();
+      loadAddressList();
+    }
+}
+  
   
   onMount(async () => {
     try {
@@ -38,7 +75,8 @@
       // Load both data types in parallel
       await Promise.all([
         loadShoppingLists(),
-        loadPastOrders()
+        loadPastOrders(),
+        loadAddressList()
       ]);
       
     } catch (error) {
@@ -60,6 +98,20 @@
       return []; // Return empty array instead of failing completely
     } finally {
       isListsLoading = false;
+    }
+  }
+
+  async function loadAddressList() {
+    try {
+      isAddressListsLoading = true;
+      const response = await addressListAPI.getAddresses(user._id);
+      addressLists = response.data || [];
+      console.log('Address lists loaded:', addressList);
+    } catch (error) {
+      console.error('Error fetching address lists:', error);
+      return []; // Return empty array instead of failing completely
+    } finally {
+      isAddressListsLoading = false;
     }
   }
   
@@ -118,6 +170,84 @@
       errorMessage = error.message || 'Failed to create shopping list';
     } finally {
       isCreatingList = false;
+    }
+  }
+
+  // Shopping list functions
+  async function createNewAddress() {
+    
+    try {
+      isCreatingAddress = true;
+      
+      const response = await addressListAPI.createAddress({ 
+        userId: user._id,
+        streetAddress: newStreetAddress,
+        apartment: newApartment,
+        city: newCity,
+        state: newCountryState,
+        postalCode: newPostalCode,
+        country: newCountry,
+        phoneNumber: newPhoneNumber,
+        isDefaultAddress: isDefaultAddress,
+        deliveryInstructions: deliveryInstructions,
+      });
+      
+      // Add new list to existing lists
+      addressLists = [...addressLists, response.data];
+      
+      // Reset form
+      newListName = '';
+      showNewAddressForm = false;
+    } catch (error) {
+      console.error('Error creating address:', error);
+      errorMessage = error.message || 'Failed to create address';
+    } finally {
+      isCreatingAddress = false;
+    }
+  }
+
+  async function editAddress() {
+    
+    try {
+      isEditingAddress = true;
+      
+      const response = await addressListAPI.updateAddress(addressIdToEdit, { 
+        streetAddress: editedStreetAddress,
+        apartment: editedApartment,
+        city: editedCity,
+        state: editedCountryState,
+        postalCode: editedPostalCode,
+        country: editedCountry,
+        phoneNumber: editedPhoneNumber,
+        isDefaultAddress: editedDefaultAddress,
+        deliveryInstructions: editedDeliveryInstructions,
+      });
+      
+      // Update the address in the list
+      addressLists = addressLists.map(list => list._id === addressIdToEdit ? response.data : list);
+      
+      // Reset form
+      showEditAddressForm = false;
+    } catch (error) {
+      console.error('Error editing address:', error);
+      errorMessage = error.message || 'Failed to edit address';
+    } finally {
+      isEditingAddress = false;
+    }
+  }
+
+  async function deleteAddress(id) {
+    if (!confirm('Are you sure you want to delete this address?')) {
+      return;
+    }
+    
+    try {
+      await addressListAPI.deleteAddress(id);
+      // Remove deleted list from array
+      addressLists = addressLists.filter(list => list._id !== id);
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      errorMessage = error.message || 'Failed to delete address';
     }
   }
   
@@ -253,6 +383,12 @@
           >
             Shopping Lists
           </button>
+          <button 
+          class={`py-2 px-4 font-medium ${activeTab === 'address-list' ? 'border-b-2 border-pink-400 text-pink-500' : 'text-gray-500 hover:text-gray-700'}`}
+          on:click={() => activeTab = 'address-list'}
+        >
+          Address Management
+        </button>
         </div>
       </div>
       
@@ -353,7 +489,7 @@
           {#if isListsLoading}
             <div class="p-6 text-center">
               <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mb-2"></div>
-              <p class="text-gray-500">Loading lists...</p>
+              <p class="text-gray-500">Loading addresses...</p>
             </div>
           {:else if shoppingLists.length === 0}
             <div class="p-6 text-center text-gray-500">
@@ -395,6 +531,287 @@
                       </button>
                     </div>
                   </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Address Manager -->
+      <div class={activeTab === 'address-list' ? '' : 'hidden'}>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="border-b p-4 bg-pink-50 flex justify-between items-center">
+            <h2 class="text-xl font-semibold">My Addresses</h2>
+            <button 
+              on:click={() => showNewAddressForm = !showNewAddressForm}
+              class="px-3 py-1 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors text-sm flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Address
+            </button>
+          </div>
+          
+          {#if showNewAddressForm}
+            <div class="p-4 border-b bg-gray-50">
+              <form on:submit|preventDefault={createNewAddress} class="flex-col items-center space-x-2">
+                <input 
+                  type="text" 
+                  bind:value={newStreetAddress}
+                  label="Street Address"
+                  placeholder="Enter Street Address"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newApartment}
+                  label="Apartment"
+                  placeholder="Enter Apartment"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newCity}
+                  label="City"
+                  placeholder="Enter City"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newCountryState}
+                  label="State"
+                  placeholder="Enter State"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newPostalCode}
+                  label="Postal Code"
+                  placeholder="Enter Postal Code"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newCountry}
+                  label="Country"
+                  placeholder="Enter Country"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <input 
+                  type="text" 
+                  bind:value={newPhoneNumber}
+                  label="Phone Number"
+                  placeholder="Enter Phone Number"
+                  required
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <!-- checkbox for default -->
+                 <span class="mr-2">Default Address?</span>
+                <input 
+                  type="checkbox" 
+                  label="Default Address?"
+                  bind:checked={isDefaultAddress}
+                  class="mr-2"
+                />
+                <!-- delivery instructions -->
+                <input 
+                  type="text" 
+                  bind:value={deliveryInstructions}
+                  label="Delivery Instructions"
+                  placeholder="Enter Delivery Instructions"
+                  class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                />
+                <button 
+                  type="submit"
+                  disabled={isCreatingAddress}
+                  class="px-4 py-2 bg-pink-400 text-white rounded hover:bg-pink-500 disabled:opacity-50"
+                >
+                  {isCreatingAddress ? 'Adding...' : 'Add'}
+                </button>
+                <button 
+                  type="button"
+                  on:click={() => showNewAddressForm = false}
+                  class="px-4 py-2 border rounded hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+              </form>
+            </div>
+          {/if}
+          
+          {#if isAddressListsLoading}
+            <div class="p-6 text-center">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mb-2"></div>
+              <p class="text-gray-500">Loading lists...</p>
+            </div>
+          {:else if addressLists.length === 0}
+            <div class="p-6 text-center text-gray-500">
+              <p>You don't have any addresses yet.</p>
+              <button 
+                on:click={() => showNewAddressForm = true}
+                class="text-pink-500 inline-block mt-2 hover:underline"
+              >
+                Add your first address
+              </button>
+            </div>
+          {:else}
+            <div class="divide-y">
+              {#each addressLists as list}
+                <div class="p-4 hover:bg-gray-50 transition-colors">
+                  <div class="flex justify-between items-start">
+                    {#if showEditAddressForm && addressIdToEdit === list._id}
+                      <form on:submit|preventDefault={editAddress} class="flex-col items-center space-x-2">
+                        <input 
+                          type="text" 
+                          bind:value={editedStreetAddress}
+                          label="Street Address"
+                          placeholder="Enter Street Address"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedApartment}
+                          label="Apartment"
+                          placeholder="Enter Apartment"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedCity}
+                          label="City"
+                          placeholder="Enter City"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedCountryState}
+                          label="State"
+                          placeholder="Enter State"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedPostalCode}
+                          label="Postal Code"
+                          placeholder="Enter Postal Code"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedCountry}
+                          label="Country"
+                          placeholder="Enter Country"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <input 
+                          type="text" 
+                          bind:value={editedPhoneNumber}
+                          label="Phone Number"
+                          placeholder="Enter Phone Number"
+                          required
+                          class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <!-- checkbox for default -->
+                        <span class="mr-2">Default Address?</span>
+                        <input 
+                            type="checkbox" 
+                            label="Default Address?"
+                            bind:checked={editedDefaultAddress}
+                            class="mr-2"
+                        />
+                        <!-- delivery instructions -->
+                        <input 
+                            type="text" 
+                            bind:value=
+                            {editedDeliveryInstructions}
+                            label="Delivery Instructions"
+                            placeholder="Enter Delivery Instructions"
+                            class="flex-1 p-2 rounded border focus:ring-pink-400 focus:border-pink-400"
+                        />
+                        <button 
+                          type="submit"
+                          disabled={isEditingAddress}
+                          class="px-4 py-2 bg-pink-400 text-white rounded hover:bg-pink-500 disabled:opacity-50"
+                        >
+                          {isEditingAddress ? 'Editing...' : 'Save'}
+                        </button>
+                        <button 
+                          type="button"
+                          on:click={() => showEditAddressForm = false}
+                          class="px-4 py-2 border rounded hover:bg-gray-100"
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    {/if}
+                    {#if !showEditAddressForm || addressIdToEdit !== list._id}
+                    <div>
+                      <h3 class="font-medium">{list.streetAddress}</h3>
+                      {#if list.city}
+                        <p class="text-sm text-gray-600">{list.city}</p>
+                      {/if}
+                      {#if list.state}
+                      <p class="text-sm text-gray-600">{list.state}</p>
+                    {/if}
+                    {#if list.postalCode}
+                      <p class="text-sm text-gray-600">{list.postalCode}</p>
+                    {/if}
+                    {#if list.country}
+                      <p class="text-sm text-gray-600">{list.country}</p>
+                    {/if}
+                    {#if list.phoneNumber}
+                      <p class="text-sm text-gray-600">{list.phoneNumber}</p>
+                    {/if}
+                    {#if list.deliveryInstructions}
+                      <p class="text-sm text-gray-600">{list.deliveryInstructions}</p>
+                    {/if}
+                    {#if list.isDefault}
+                      <p class="text-sm text-gray-600">Default Address</p>
+                    {/if}
+                  </div>
+                    <div class="flex space-x-2">
+                      <button 
+                        on:click={() => {
+                          addressIdToEdit = list._id;
+                          editedStreetAddress = list.streetAddress;
+                          editedApartment = list.apartment;
+                          editedCity = list.city;
+                          editedCountryState = list.state;
+                          editedPostalCode = list.postalCode;
+                          editedCountry = list.country;
+                          editedPhoneNumber = list.phoneNumber;
+                          editedDefaultAddress = list.isDefault;
+                          editedDeliveryInstructions = list.deliveryInstructions;
+                          showEditAddressForm = true;
+                        }}
+                        class="px-3 py-1 bg-pink-400 text-white rounded hover:bg-pink-500 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        on:click={() => deleteAddress(list._id)}
+                        class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {/if}
+                  </div>
+
                 </div>
               {/each}
             </div>
