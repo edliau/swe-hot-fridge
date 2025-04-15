@@ -29,6 +29,8 @@ class API {
 		};
 
 		try {
+      console.log(`API Request: ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : null);
+      
 			const response = await fetch(`${API_URL}${endpoint}`, config);
 
 			// Handle non-JSON responses
@@ -43,9 +45,11 @@ class API {
 			const data = await response.json();
 
 			if (!response.ok) {
+        console.error('API Error Response:', data);
 				throw new Error(data.error || data.message || 'Something went wrong');
 			}
 
+      console.log(`API Response: ${options.method || 'GET'} ${endpoint}`, data);
 			return data;
 		} catch (error) {
 			console.error('API Error:', error);
@@ -121,11 +125,19 @@ export const productsAPI = {
 export const categoryAPI = {
 	getAllCategories: () => new API().get('/categories'),
 	getCategoryById: (id) => new API().get(`/categories/${id}`),
+	getProductsByCategory: (categoryId, params = {}) => {
+	  const queryParams = new URLSearchParams();
+	  Object.entries(params).forEach(([key, value]) => {
+		if (value !== undefined && value !== null) {
+		  queryParams.append(key, value);
+		}
+	  });
+	  return new API().get(`/categories/${categoryId}/products?${queryParams.toString()}`);
+	},
 	createCategory: (data) => new API().post('/categories', data),
 	updateCategory: (id, data) => new API().put(`/categories/${id}`, data),
-	deleteCategory: (id) => new API().delete(`/categories/${id}`),
-	getProductsByCategory: (categoryId) => new API().get(`/categories/${categoryId}/products`)
-};
+	deleteCategory: (id) => new API().delete(`/categories/${id}`)
+  };
 
 // Cart API Service
 export const cartAPI = {
@@ -167,7 +179,23 @@ export const orderAPI = {
 // Payment API Service
 export const paymentAPI = {
 	createPaymentIntent: (paymentData) =>
-		new API().post('/payments/create-payment-intent', paymentData)
+		{
+    console.log('Creating payment intent with data:', paymentData);
+    return new API().post('/payments/create-payment-intent', paymentData);
+  },
+
+  // Add these additional methods as needed
+  getPaymentMethods: () => new API().get('/payments/methods'),
+  
+  // Add method to save a new payment method
+  savePaymentMethod: (paymentMethodData) => {
+    return new API().post('/users/payment', paymentMethodData);
+  },
+  
+  // Set a payment method as default
+  setDefaultPaymentMethod: (id) => {
+    return new API().put(`/users/payment/${id}`, { isDefault: true });
+  }
 };
 
 // Shopping Lists API Service

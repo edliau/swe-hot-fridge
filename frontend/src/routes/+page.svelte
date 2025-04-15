@@ -164,19 +164,23 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           {#if categories.length > 0}
             {#each categories as category}
-              <button 
-                type="button"
+              <a 
+                href={`/category/${category._id}`}
                 class="bg-pink-100 p-4 rounded-lg flex flex-col items-center hover:bg-pink-200 transition-colors w-full"
-                on:click={() => viewCategory(category._id)}
-                on:keydown={(e) => e.key === 'Enter' && viewCategory(category._id)}
               >
-                <div class="bg-white rounded-full w-16 h-16 flex items-center justify-center mb-2">
-                  <div class="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-xs font-bold">
-                    <span>{category.name.slice(0, 1).toUpperCase()}</span>
+                {#if category.image && category.image !== '/images/default-category.png'}
+                  <div class="w-16 h-16 rounded-full overflow-hidden mb-2">
+                    <img src={category.image} alt={category.name} class="w-full h-full object-cover">
                   </div>
-                </div>
-                <span>{category.name}</span>
-              </button>
+                {:else}
+                  <div class="bg-white rounded-full w-16 h-16 flex items-center justify-center mb-2">
+                    <div class="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-xs font-bold">
+                      <span>{category.name.slice(0, 1).toUpperCase()}</span>
+                    </div>
+                  </div>
+                {/if}
+                <span class="text-center">{category.name}</span>
+              </a>
             {/each}
           {:else}
             <div class="col-span-2 md:col-span-4 text-center py-5 text-gray-500">

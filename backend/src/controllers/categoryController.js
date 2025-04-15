@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
@@ -40,6 +41,77 @@ exports.getCategory = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: category
+  });
+});
+
+// @desc    Get products by category
+// @route   GET /api/categories/:id/products
+// @access  Public
+exports.getProductsByCategory = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  
+  // Verify category exists
+  const category = await Category.findById(id);
+  if (!category) {
+    return next(new ErrorResponse('Category not found', 404));
+  }
+
+  // Build filter object with category
+  const filter = { category: id };
+
+  // Apply optional filters if provided
+  if (req.query.search) {
+    filter.name = { $regex: req.query.search, $options: "i" };
+  }
+
+  if (req.query.minPrice || req.query.maxPrice) {
+    filter.price = {};
+    if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
+    if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
+  }
+
+  if (req.query.onSale === "true") {
+    filter.isOnSale = true;
+  }
+
+  if (req.query.inStock === "true") {
+    filter.inStock = true;
+  }
+
+  // Sort options
+  const sortOptions = {};
+  if (req.query.sort) {
+    if (req.query.sort === "price-asc") sortOptions.price = 1;
+    if (req.query.sort === "price-desc") sortOptions.price = -1;
+    if (req.query.sort === "name-asc") sortOptions.name = 1;
+    if (req.query.sort === "name-desc") sortOptions.name = -1;
+    if (req.query.sort === "popular") sortOptions.popularity = -1;
+    if (req.query.sort === "rating") sortOptions.averageRating = -1;
+    if (req.query.sort === "newest") sortOptions.createdAt = -1;
+  } else {
+    // Default sorting
+    sortOptions.createdAt = -1;
+  }
+
+  // Get products for this category
+  const products = await Product.find(filter)
+    .sort(sortOptions)
+    .skip(skip)
+    .limit(limit);
+
+  // Get total count for pagination
+  const totalProducts = await Product.countDocuments(filter);
+
+  res.status(200).json({
+    success: true,
+    count: products.length,
+    totalPages: Math.ceil(totalProducts / limit),
+    currentPage: page,
+    data: products,
+    category
   });
 });
 

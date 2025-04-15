@@ -1,4 +1,4 @@
-// Stripe Payment Service for handling Stripe interactions
+// frontend/src/lib/services/stripeService.js
 import { browser } from '$app/environment';
 
 /**
@@ -127,17 +127,20 @@ class StripeService {
       throw new Error('Stripe not initialized');
     }
     
-    if (!this.cardElement) {
-      throw new Error('Card element not initialized');
+    if (!this.cardElement && !paymentData.payment_method) {
+      throw new Error('Card element or payment method ID not provided');
     }
     
     // Default payment data
-    const defaultData = {
-      payment_method: {
+    const defaultData = {};
+    
+    // Only add card if not already provided in paymentData
+    if (!paymentData.payment_method && this.cardElement) {
+      defaultData.payment_method = {
         card: this.cardElement,
         billing_details: {}
-      }
-    };
+      };
+    }
     
     // Merge default data with provided data
     const data = { ...defaultData, ...paymentData };
@@ -155,6 +158,10 @@ class StripeService {
   async confirmPaymentWithExistingMethod(clientSecret, paymentMethodId) {
     if (!this.isInitialized || !this.stripe) {
       throw new Error('Stripe not initialized');
+    }
+    
+    if (!paymentMethodId) {
+      throw new Error('Payment method ID is required');
     }
     
     return await this.stripe.confirmCardPayment(clientSecret, {
@@ -181,7 +188,11 @@ class StripeService {
    */
   cleanup() {
     if (this.cardElement) {
-      this.cardElement.unmount();
+      try {
+        this.cardElement.unmount();
+      } catch (e) {
+        console.log('Error unmounting card element:', e);
+      }
       this.cardElement = null;
     }
   }

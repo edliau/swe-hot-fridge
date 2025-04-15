@@ -13,6 +13,8 @@ const stripeService = require('../utils/stripeService');
 exports.createPaymentIntent = asyncHandler(async (req, res, next) => {
   const { orderId, paymentMethodId, savePaymentMethod } = req.body;
   
+  console.log('Create payment intent request:', req.body);
+  
   // Get user
   const user = await User.findById(req.user.id).select('+stripeCustomerId');
   if (!user) {
@@ -30,7 +32,7 @@ exports.createPaymentIntent = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Not authorized to process this order', 401));
   }
   
-  // Ensure payment method exists if provided
+  // Only validate payment method if one is provided
   let paymentMethod;
   if (paymentMethodId) {
     paymentMethod = await PaymentMethod.findById(paymentMethodId);
@@ -69,41 +71,72 @@ exports.createPaymentIntent = asyncHandler(async (req, res, next) => {
       userId: user._id.toString(),
       email: user.email,
       description: `Payment for order #${order._id}`,
-      confirm: !!paymentMethodId // Confirm if payment method provided
+      confirm: paymentMethodId ? true : false // Only auto-confirm if payment method provided
     });
     
-    // If the user wants to save the payment method
-    if (savePaymentMethod && paymentIntent.payment_method && !paymentMethod) {
-      const stripePaymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
-      
-      // Create payment method in our database
-      const newPaymentMethod = await PaymentMethod.create({
-        userId: req.user.id,
-        stripeCustomerId,
-        stripePaymentMethodId: stripePaymentMethod.id,
-        type: stripePaymentMethod.type,
-        last4: stripePaymentMethod.card ? stripePaymentMethod.card.last4 : null,
-        brand: stripePaymentMethod.card ? stripePaymentMethod.card.brand : null,
-        expMonth: stripePaymentMethod.card ? stripePaymentMethod.card.exp_month.toString() : null,
-        expYear: stripePaymentMethod.card ? stripePaymentMethod.card.exp_year.toString() : null,
-        isDefault: false
-      });
-      
-      // Add payment method to user's paymentMethods array
-      await User.findByIdAndUpdate(
-        req.user.id,
-        { $push: { paymentMethods: newPaymentMethod._id } }
-      );
-    }
+    console.log('Payment intent created:', {
+      id: paymentIntent.id,
+      status: paymentIntent.status,
+      payment_method: paymentIntent.payment_method
+    });
     
+    // Return response - client will handle confirmation via Stripe Elements
     res.status(200).json({
       success: true,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       status: paymentIntent.status
     });
+    
   } catch (error) {
+    console.error('Payment error:', error);
     return next(new ErrorResponse(`Payment error: ${error.message}`, 500));
+  }
+});
+
+exports.savePaymentMethod = asyncHandler(async (req, res, next) => {
+  const { paymentMethodId, billingDetails } = req.body;
+  
+  if (!paymentMethodId) {
+    return next(new ErrorResponse('Payment method ID is required', 400));
+  }
+  
+  const user = await User.findById(req.user.id).select('+stripeCustomerId');
+  if (!user) {
+    return next(new ErrorResponse('User not found', 404));
+  }
+  
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const stripePaymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    
+    // Create a new payment method record
+    const newPaymentMethod = await PaymentMethod.create({
+      userId: req.user.id,
+      stripeCustomerId: user.stripeCustomerId,
+      stripePaymentMethodId: paymentMethodId,
+      type: stripePaymentMethod.type,
+      last4: stripePaymentMethod.card ? stripePaymentMethod.card.last4 : null,
+      brand: stripePaymentMethod.card ? stripePaymentMethod.card.brand : null,
+      expMonth: stripePaymentMethod.card ? stripePaymentMethod.card.exp_month.toString() : null,
+      expYear: stripePaymentMethod.card ? stripePaymentMethod.card.exp_year.toString() : null,
+      cardHolderName: billingDetails?.name || null,
+      isDefault: req.body.isDefault || false
+    });
+    
+    // Add payment method to user
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { $push: { paymentMethods: newPaymentMethod._id } }
+    );
+    
+    res.status(201).json({
+      success: true,
+      data: newPaymentMethod
+    });
+  } catch (error) {
+    console.error('Error saving payment method:', error);
+    return next(new ErrorResponse(`Failed to save payment method: ${error.message}`, 500));
   }
 });
 

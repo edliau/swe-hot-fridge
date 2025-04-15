@@ -92,14 +92,7 @@
 
     onDestroy(() => {
   // Clean up Stripe resources when component is destroyed
-  if (stripeService.cardElement) {
-    try {
-      stripeService.cardElement.unmount();
-      stripeService.cardElement = null;
-    } catch (e) {
-      console.log("Error unmounting card element:", e);
-    }
-  }
+  cleanup();
 });
     
     async function loadUserData() {
@@ -144,52 +137,86 @@
       }
     }
     
-    async function initializeStripe() {
-      try {
-        // Initialize the Stripe service with publishable key from environment
-        await stripeService.initialize(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-        
-        // Create card element if we're at the payment stage
-        if (stage === 'payment') {
-          setupCardElement();
-        }
-      } catch (error) {
-        console.error('Error initializing Stripe:', error);
-        errorMessage = 'Failed to initialize payment system. Please try again later.';
-      }
+async function initializeStripe() {
+  try {
+    console.log('Initializing Stripe...');
+    
+    // Initialize the Stripe service with publishable key from environment
+    await stripeService.initialize(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+    console.log('Stripe initialized successfully');
+    
+    // Create card element if we're at the payment stage and showing payment form
+    if (stage === 'payment' && showPaymentForm) {
+      setupCardElement();
+    }
+  } catch (error) {
+    console.error('Error initializing Stripe:', error);
+    errorMessage = 'Failed to initialize payment system. Please try again later.';
+  }
+}
+    
+// In setupCardElement function
+function setupCardElement() {
+  try {
+    console.log("Setting up card element...");
+    
+    // Make sure div exists before trying to mount
+    const cardElement = document.getElementById('card-element');
+    if (!cardElement) {
+      console.error("Card element container not found in DOM");
+      return;
     }
     
-    function setupCardElement() {
-    try {
-        console.log("Setting up card element...");
-        
-        // Make sure div exists before trying to mount
-        const cardElement = document.getElementById('card-element');
-        if (!cardElement) {
-        console.error("Card element container not found in DOM");
-        return;
+    // Make sure Stripe is initialized and card element isn't already created
+    if (stripeService.isInitialized) {
+      // Always clean up first to avoid "Can only create one Element" error
+      if (stripeService.cardElement) {
+        console.log('Cleaning up existing card element');
+        stripeService.cleanup();
+      }
+      
+      // Create a new card element
+      console.log('Creating new card element');
+      const element = stripeService.createCardElement('card-element', {
+        style: {
+          base: {
+            color: '#32325d',
+            fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+            fontSmoothing: 'antialiased',
+            fontSize: '16px',
+            '::placeholder': {
+              color: '#aab7c4'
+            }
+          },
+          invalid: {
+            color: '#fa755a',
+            iconColor: '#fa755a'
+          }
         }
-        
-        // If Stripe is initialized, create the card element
-        if (stripeService.isInitialized) {
-        // Create card element and handle errors
-        const element = stripeService.createCardElement('card-element');
-        
-        // Listen for card element errors
-        element.on('change', (event) => {
-            cardElementError = event.error ? event.error.message : '';
-        });
-        
-        console.log("Card element setup complete");
-        } else {
-        console.error("Stripe not initialized");
-        errorMessage = "Payment system not ready yet";
-        }
-    } catch (error) {
-        console.error('Error setting up card element:', error);
-        errorMessage = 'Failed to set up payment form: ' + error.message;
+      });
+      
+      // Listen for card element errors
+      element.on('change', (event) => {
+        cardElementError = event.error ? event.error.message : '';
+      });
+      
+      console.log("Card element setup complete");
+    } else {
+      console.error("Stripe not initialized");
+      errorMessage = "Payment system not ready yet";
     }
-    }
+  } catch (error) {
+    console.error('Error setting up card element:', error);
+    errorMessage = 'Failed to set up payment form: ' + error.message;
+  }
+}
+
+function cleanup() {
+  console.log('Cleaning up checkout page resources');
+  if (stripeService.cardElement) {
+    stripeService.cleanup();
+  }
+}
     
     async function handleAddressSubmit() {
     if (!addressForm.streetAddress || !addressForm.city || !addressForm.state || 
@@ -276,214 +303,253 @@
       selectedPaymentMethod = method;
     }
     
-    function goToStage(newStage) {
-    // If moving away from payment stage, clean up card element
-    if (stage === 'payment' && newStage !== 'payment') {
-        if (stripeService.cardElement) {
-        try {
-            stripeService.cardElement.unmount();
-            stripeService.cardElement = null;
-        } catch (e) {
-            console.log("Error unmounting card element:", e);
-        }
-        }
+function goToStage(newStage) {
+  console.log(`Changing stage from ${stage} to ${newStage}`);
+  
+  // If moving away from payment stage, clean up card element
+  if (stage === 'payment' && newStage !== 'payment') {
+    console.log('Cleaning up card element before leaving payment stage');
+    if (stripeService.cardElement) {
+      try {
+        stripeService.cleanup();
+      } catch (e) {
+        console.log("Error cleaning up card element:", e);
+      }
     }
-        
-    if (newStage === 'review') {
-        if (!selectedPaymentMethod && !showPaymentForm) {
-        errorMessage = 'Please select a payment method';
-        return;
-        }
-        
-        // Check for card element errors if using a new card
-        if (showPaymentForm && cardElementError) {
-        errorMessage = 'Please fix the issues with your card information: ' + cardElementError;
-        return;
-        }
+  }
+  
+  // Validate before moving to review
+  if (newStage === 'review') {
+    if (!selectedAddress) {
+      errorMessage = 'Please select a shipping address';
+      return;
     }
     
-    // Clear any error messages
+    if (!selectedPaymentMethod && !showPaymentForm) {
+      errorMessage = 'Please select a payment method';
+      return;
+    }
+    
+    // Check for card element errors if using a new card
+    if (showPaymentForm && cardElementError) {
+      errorMessage = 'Please fix the issues with your card information: ' + cardElementError;
+      return;
+    }
+    
+    // Validate payment form if using a new card
+    if (showPaymentForm && !paymentForm.cardholderName) {
+      errorMessage = 'Please enter the cardholder name';
+      return;
+    }
+  }
+  
+  // Clear any error messages
+  errorMessage = '';
+  
+  // Update the stage
+  stage = newStage;
+  
+  // If going to payment stage, initialize Stripe elements
+  if (newStage === 'payment') {
+    // Only set up card element if showing payment form
+    if (showPaymentForm) {
+      // Use setTimeout to ensure the DOM is ready
+      setTimeout(() => {
+        setupCardElement();
+      }, 100);
+    }
+  }
+}
+    
+// Updated placeOrder function for the checkout page
+async function placeOrder() {
+  try {
+    isProcessingPayment = true;
     errorMessage = '';
     
-    // If moving away from payment stage to review, validate payment form
-    if (stage === 'payment' && newStage === 'review' && showPaymentForm) {
-        if (!paymentForm.cardholderName) {
-        errorMessage = 'Please enter the cardholder name';
-        return;
-        }
-    }
-
-    // If going to payment stage
-  if (newStage === 'payment' && showPaymentForm) {
-    setTimeout(() => {
-      setupCardElement();
-    }, 100);
-  }
-    
-    // Update the stage
-    stage = newStage;
-    
-    // If going to payment stage, initialize Stripe elements
-    if (newStage === 'payment') {
-        // Only set up card element if showing payment form
-        if (showPaymentForm) {
-        setupCardElement();
-        }
-    }
+    // Make sure we have all required information
+    if (!selectedAddress) {
+      errorMessage = 'Please select a shipping address';
+      isProcessingPayment = false;
+      return;
     }
     
-    async function placeOrder() {
-      try {
-        isProcessingPayment = true;
-        errorMessage = '';
-        
-        // Make sure we have all required information
-        if (!selectedAddress) {
-          errorMessage = 'Please select a shipping address';
-          isProcessingPayment = false;
-          return;
-        }
-        
-        if (!selectedPaymentMethod && !showPaymentForm) {
-          errorMessage = 'Please select a payment method';
-          isProcessingPayment = false;
-          return;
-        }
-        
-        // Check for card element errors
-        if (showPaymentForm && cardElementError) {
-          errorMessage = cardElementError;
-          isProcessingPayment = false;
-          return;
-        }
-        
-        // Prepare order data
-        const orderData = {
-          orderItems: items.map(item => ({
-            productId: item.productId._id,
-            quantity: item.quantity
-          })),
-          addressId: selectedAddress._id,
-          paymentMethodId: selectedPaymentMethod ? selectedPaymentMethod._id : null,
-          tax,
-          deliveryDate,
-          deliveryTimeSlot,
-          specialInstructions
-        };
-        
-        // Create order
-        const createOrderResponse = await orderAPI.createOrder(orderData);
-        
-        if (!createOrderResponse.success) {
-          throw new Error(createOrderResponse.message || 'Failed to create order');
-        }
-        
-        const order = createOrderResponse.data;
-        
-        // If using new card, create payment intent and confirm with card element
-        if (showPaymentForm) {
-          // Create payment intent
-          const paymentIntentResponse = await paymentAPI.createPaymentIntent({
-            orderId: order._id,
-            savePaymentMethod: paymentForm.saveCard
-          });
-          
-          if (!paymentIntentResponse.success) {
-            throw new Error(paymentIntentResponse.message || 'Failed to create payment intent');
-          }
-          
-          // Confirm payment with card element
-          const { error, paymentIntent } = await stripeService.confirmCardPayment(
-            paymentIntentResponse.clientSecret,
-            {
-              payment_method: {
-                card: stripeService.cardElement,
-                billing_details: {
-                  name: paymentForm.cardholderName || `${user?.firstName || ''} ${user?.lastName || 'Guest'}`
-                }
-              }
-            }
-          );
-          
-          if (error) {
-            throw new Error(error.message || 'Payment failed');
-          }
-          
-          if (paymentIntent.status !== 'succeeded') {
-            throw new Error('Payment processing failed');
-          }
-        } else if (selectedPaymentMethod) {
-          // Use existing payment method
-          const paymentIntentResponse = await paymentAPI.createPaymentIntent({
-            orderId: order._id,
-            paymentMethodId: selectedPaymentMethod._id
-          });
-          
-          if (!paymentIntentResponse.success) {
-            throw new Error(paymentIntentResponse.message || 'Failed to process payment');
-          }
-          
-          // If the payment intent requires confirmation
-          if (paymentIntentResponse.status === 'requires_confirmation') {
-            const { error, paymentIntent } = await stripeService.confirmPaymentWithExistingMethod(
-              paymentIntentResponse.clientSecret,
-              selectedPaymentMethod.stripePaymentMethodId
-            );
-            
-            if (error) {
-              throw new Error(error.message || 'Payment confirmation failed');
-            }
-            
-            if (paymentIntent.status !== 'succeeded') {
-              throw new Error('Payment processing failed');
-            }
+    // Check for payment method - either selected or via card element
+    if (!selectedPaymentMethod && !showPaymentForm) {
+      errorMessage = 'Please select a payment method or add a new one';
+      isProcessingPayment = false;
+      return;
+    }
+    
+    // Check for card element errors
+    if (showPaymentForm && cardElementError) {
+      errorMessage = cardElementError;
+      isProcessingPayment = false;
+      return;
+    }
+    
+    console.log('Starting order creation...');
+    
+    // Prepare order data - only include paymentMethodId if one is selected
+    const orderData = {
+      orderItems: items.map(item => ({
+        productId: item.productId._id,
+        quantity: item.quantity
+      })),
+      addressId: selectedAddress._id,
+      tax,
+      deliveryDate,
+      deliveryTimeSlot,
+      specialInstructions
+    };
+    
+    // Only add paymentMethodId if using an existing payment method
+    if (selectedPaymentMethod) {
+      orderData.paymentMethodId = selectedPaymentMethod._id;
+    }
+    
+    console.log('Creating order with data:', orderData);
+    
+    // Create order
+    const createOrderResponse = await orderAPI.createOrder(orderData);
+    
+    if (!createOrderResponse.success) {
+      throw new Error(createOrderResponse.message || 'Failed to create order');
+    }
+    
+    const order = createOrderResponse.data;
+    console.log('Order created successfully:', order);
+    
+    // Handle payment based on method
+    if (showPaymentForm) {
+      console.log('Processing payment with new card');
+      // Create payment intent without specifying a payment method ID
+      const paymentIntentData = {
+        orderId: order._id,
+        savePaymentMethod: paymentForm.saveCard
+      };
+      
+      console.log('Creating payment intent:', paymentIntentData);
+      const paymentIntentResponse = await paymentAPI.createPaymentIntent(paymentIntentData);
+      
+      if (!paymentIntentResponse.success) {
+        throw new Error(paymentIntentResponse.message || 'Failed to create payment intent');
+      }
+      
+      console.log('Payment intent created:', paymentIntentResponse);
+      
+      // Check if card element exists
+      if (!stripeService.cardElement) {
+        throw new Error('Card element not initialized');
+      }
+      
+      const billingDetails = {
+        name: paymentForm.cardholderName || `${user?.firstName || ''} ${user?.lastName || 'Guest'}`
+      };
+      
+      console.log('Confirming payment with billing details:', billingDetails);
+      const { error, paymentIntent } = await stripeService.confirmCardPayment(
+        paymentIntentResponse.clientSecret,
+        {
+          payment_method: {
+            card: stripeService.cardElement,
+            billing_details: billingDetails
           }
         }
+      );
+      
+      if (error) {
+        console.error('Payment confirmation error:', error);
+        throw new Error(error.message || 'Payment failed');
+      }
+      
+      console.log('Payment intent status:', paymentIntent.status);
+      if (paymentIntent.status !== 'succeeded') {
+        throw new Error('Payment processing failed. Status: ' + paymentIntent.status);
+      }
+      
+    } else if (selectedPaymentMethod) {
+      console.log('Processing payment with existing payment method:', selectedPaymentMethod._id);
+      // Use existing payment method
+      const paymentIntentResponse = await paymentAPI.createPaymentIntent({
+        orderId: order._id,
+        paymentMethodId: selectedPaymentMethod._id
+      });
+      
+      if (!paymentIntentResponse.success) {
+        throw new Error(paymentIntentResponse.message || 'Failed to process payment');
+      }
+      
+      console.log('Payment intent response:', paymentIntentResponse);
+      
+      // If the payment intent requires confirmation
+      if (paymentIntentResponse.status === 'requires_confirmation') {
+        console.log('Payment requires confirmation with method:', selectedPaymentMethod.stripePaymentMethodId);
+        const { error, paymentIntent } = await stripeService.confirmPaymentWithExistingMethod(
+          paymentIntentResponse.clientSecret,
+          selectedPaymentMethod.stripePaymentMethodId
+        );
         
-        // Clean up Stripe resources
-        stripeService.cleanup();
+        if (error) {
+          console.error('Payment confirmation error:', error);
+          throw new Error(error.message || 'Payment confirmation failed');
+        }
         
-        // Clear cart after successful order
-        await cartStore.clearCart();
-
-        // Refresh user data to get updated addresses
-        await authStore.refreshUserData();
-        
-        // Go to order confirmation page
-        goto(`/order/confirmation/${order._id}`);
-      } catch (error) {
-        console.error('Error placing order:', error);
-        errorMessage = error.message || 'Failed to place order';
-        isProcessingPayment = false;
+        console.log('Payment intent status after confirmation:', paymentIntent.status);
+        if (paymentIntent.status !== 'succeeded') {
+          throw new Error('Payment processing failed. Status: ' + paymentIntent.status);
+        }
       }
     }
     
+    // Clean up Stripe resources
+    stripeService.cleanup();
+    
+    // Clear cart after successful order
+    await cartStore.clearCart();
+
+    // Refresh user data to get updated addresses and payment methods
+    await authStore.refreshUserData();
+    
+    // Go to order confirmation page
+    goto(`/order/confirmation/${order._id}`);
+  } catch (error) {
+    console.error('Error placing order:', error);
+    errorMessage = error.message || 'Failed to place order';
+    isProcessingPayment = false;
+  }
+}
+    
     // Add new payment method button handler
     function togglePaymentForm() {
-    // If we're already showing the form, clean up first
-    if (showPaymentForm) {
-        if (stripeService.cardElement) {
-        try {
-            stripeService.cardElement.unmount();
-            stripeService.cardElement = null;
-        } catch (e) {
-            console.log("Error unmounting card element:", e);
-        }
-        }
+  console.log(`Toggling payment form. Current state: ${showPaymentForm}`);
+  
+  // Always clean up card element first
+  if (stripeService.cardElement) {
+    try {
+      console.log('Cleaning up card element before toggling');
+      stripeService.cleanup();
+    } catch (e) {
+      console.log("Error cleaning up card element:", e);
     }
+  }
+  
+  // Toggle the form visibility
+  showPaymentForm = !showPaymentForm;
+  
+  // Reset selected payment method if showing form
+  if (showPaymentForm) {
+    selectedPaymentMethod = null;
     
-    // Toggle the form visibility
-    showPaymentForm = !showPaymentForm;
-    
-    // If we're now showing the form, set up the card element after a small delay
-    if (showPaymentForm) {
-        setTimeout(() => {
-        setupCardElement();
-        }, 100);
-    }
-    }
+    // Use setTimeout to ensure the DOM is ready
+    setTimeout(() => {
+      console.log('Setting up card element after toggle');
+      setupCardElement();
+    }, 100);
+  }
+}
 
-    function cancelCheckout() {
+  function cancelCheckout() {
       goto('/cart');
     }
   </script>
