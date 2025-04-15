@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { productsAPI, categoriesAPI, promotionsAPI } from '$lib/api';
+  import { productsAPI, categoryAPI, promotionsAPI } from '$lib/api';
   import { cartStore } from '$lib/stores/cart';
   import { authStore } from '$lib/stores/auth';
   import SearchBar from '$lib/components/SearchBar.svelte';
@@ -27,7 +27,7 @@
       isLoading = true;
       
       // Fetch categories
-      const categoriesResult = await categoriesAPI.getCategories();
+      const categoriesResult = await categoryAPI.getCategories();
       categories = categoriesResult.data || [];
       
       // Fetch promotions
