@@ -175,25 +175,32 @@ export const orderAPI = {
 };
 
 // Payment API Service
+// Payment API Service
 export const paymentAPI = {
 	createPaymentIntent: (paymentData) => {
-		console.log('Creating payment intent with data:', paymentData);
-		return new API().post('/payments/create-payment-intent', paymentData);
+	  console.log('Creating payment intent with data:', paymentData);
+	  return new API().post('/payments/create-payment-intent', paymentData);
 	},
-
-	// Add these additional methods as needed
+  
+	// Get payment methods
 	getPaymentMethods: () => new API().get('/payments/methods'),
-
-	// Add method to save a new payment method
+	
+	// Save a new payment method
 	savePaymentMethod: (paymentMethodData) => {
-		return new API().post('/users/payment', paymentMethodData);
+	  console.log('Saving payment method with data:', paymentMethodData);
+	  return new API().post('/users/payment', paymentMethodData);
 	},
-
+	
 	// Set a payment method as default
 	setDefaultPaymentMethod: (id) => {
-		return new API().put(`/users/payment/${id}`, { isDefault: true });
+	  return new API().put(`/users/payment/${id}`, { isDefault: true });
+	},
+	
+	// Delete a payment method
+	deletePaymentMethod: (id) => {
+	  return new API().delete(`/users/payment/${id}`);
 	}
-};
+  };
 
 // Shopping Lists API Service
 export const shoppingListsAPI = {
