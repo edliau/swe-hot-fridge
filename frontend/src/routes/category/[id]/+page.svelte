@@ -17,6 +17,7 @@
   let currentPage = 1;
   let isLoading = true;
   let errorMessage = '';
+  let isAddingToCart = {};
   let addToCartSuccess = {};
   let sort = 'newest';
   let minPrice = '';
@@ -34,6 +35,7 @@
   async function fetchCategoryData() {
     try {
       isLoading = true;
+      console.log('Category ID:', categoryId);
       
       // Fetch category details
       const categoryResponse = await categoryAPI.getCategoryById(categoryId);
@@ -110,6 +112,7 @@
   // Handle Add to Cart
   async function handleAddToCart(productId) {
     try {
+      isAddingToCart[productId] = true;
       const success = await cartStore.addItem(productId, 1);
       
       if (success) {
@@ -121,6 +124,8 @@
     } catch (error) {
       console.error('Error adding to cart:', error);
       errorMessage = error.message || 'Failed to add product to cart';
+    } finally {
+      isAddingToCart[productId] = false;
     }
   }
   
@@ -197,32 +202,18 @@
       </div>
     {:else if category}
       <!-- Category header -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div class="relative">
-          <div class="h-40 bg-gray-200 overflow-hidden">
-            {#if category.image && category.image !== '/images/default-category.png'}
-              <img src={category.image} alt={category.name} class="w-full h-full object-cover">
-            {:else}
-              <div class="w-full h-full flex items-center justify-center bg-pink-50">
-                <span class="text-4xl font-bold text-pink-200">{category.name}</span>
-              </div>
-            {/if}
-          </div>
-          
-          <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end">
-            <div class="p-6 text-white">
-              <h1 class="text-3xl font-bold mb-2">{category.name}</h1>
-              {#if category.description}
-                <p class="text-white/80">{category.description}</p>
-              {/if}
-            </div>
-          </div>
-        </div>
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+      <div class="px-6 py-8">
+        <h1 class="text-3xl font-bold mb-2 text-gray-800">{category.name}</h1>
+        {#if category.description}
+          <p class="text-gray-600">{category.description}</p>
+        {/if}
       </div>
+    </div>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Filters sidebar -->
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-3">
           <div class="bg-white rounded-lg shadow-md p-4 sticky top-4">
             <h2 class="font-bold text-lg mb-4">Filters</h2>
             
@@ -246,7 +237,6 @@
               </div>
               
               <!-- Price range -->
-              // Fixed version
               <fieldset>
                 <legend class="block mb-1 text-sm font-medium">Price Range</legend>
                 <div class="grid grid-cols-2 gap-2">
@@ -383,9 +373,11 @@
                         on:click={() => handleAddToCart(product._id)} 
                         class="bg-pink-400 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-pink-500 transition-colors"
                         aria-label={`Add ${product.name} to cart`}
-                        disabled={!product.inStock}
+                        disabled={isAddingToCart[product._id] || !product.inStock}
                       >
-                        {#if addToCartSuccess[product._id]}
+                        {#if isAddingToCart[product._id]}
+                          <div class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        {:else if addToCartSuccess[product._id]}
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                           </svg>
@@ -410,15 +402,15 @@
               <div class="flex justify-center mt-8">
                 <div class="flex space-x-1">
                   <button 
-                  on:click={() => changePage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Previous page"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
+                    on:click={() => changePage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Previous page"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
                   
                   {#each Array(totalPages) as _, i}
                     <button 
@@ -430,15 +422,15 @@
                   {/each}
                   
                   <button 
-                  on:click={() => changePage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Next page"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                    on:click={() => changePage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Next page"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             {/if}
@@ -488,9 +480,9 @@
         <div class="text-xs">Fresh produce at the<br>click of a finger</div>
       </div>
       <img 
-      src="/images/logo/logo.png" 
-      alt="Hot Fridge Logo" 
-      class="h-12 w-12 rounded-md"
+        src="/images/logo/logo.png" 
+        alt="Hot Fridge Logo" 
+        class="h-12 w-12 rounded-md"
       />
     </div>
   </footer>
