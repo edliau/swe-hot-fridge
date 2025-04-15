@@ -139,24 +139,6 @@ export const categoryAPI = {
 	deleteCategory: (id) => new API().delete(`/categories/${id}`)
   };
 
-// Category API Service
-export const categoryAPI = {
-	getAllCategories: () => new API().get('/categories'),
-	getCategoryById: (id) => new API().get(`/categories/${id}`),
-	getProductsByCategory: (categoryId, params = {}) => {
-	  const queryParams = new URLSearchParams();
-	  Object.entries(params).forEach(([key, value]) => {
-		if (value !== undefined && value !== null) {
-		  queryParams.append(key, value);
-		}
-	  });
-	  return new API().get(`/categories/${categoryId}/products?${queryParams.toString()}`);
-	},
-	createCategory: (data) => new API().post('/categories', data),
-	updateCategory: (id, data) => new API().put(`/categories/${id}`, data),
-	deleteCategory: (id) => new API().delete(`/categories/${id}`)
-  };
-
 // Cart API Service
 export const cartAPI = {
 	getCartItems: () => new API().get('/cart/items'),
