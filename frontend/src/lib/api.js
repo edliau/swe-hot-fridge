@@ -31,8 +31,6 @@ class API {
 		try {
       console.log(`API Request: ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : null);
       
-      console.log(`API Request: ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : null);
-      
 			const response = await fetch(`${API_URL}${endpoint}`, config);
 
 			// Handle non-JSON responses
@@ -48,11 +46,9 @@ class API {
 
 			if (!response.ok) {
         console.error('API Error Response:', data);
-        console.error('API Error Response:', data);
 				throw new Error(data.error || data.message || 'Something went wrong');
 			}
 
-      console.log(`API Response: ${options.method || 'GET'} ${endpoint}`, data);
       console.log(`API Response: ${options.method || 'GET'} ${endpoint}`, data);
 			return data;
 		} catch (error) {
@@ -110,19 +106,19 @@ export const authAPI = {
 
 // Products API Service
 export const productsAPI = {
-  getProducts: (params = {}) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, value);
-      }
-    });
-    return new API().get(`/products?${queryParams.toString()}`);
-  },
-  getProductById: (id) => new API().get(`/products/${id}`),
-  getFeaturedProducts: () => new API().get('/products/featured'),
-  getProductsOnSale: () => new API().get('/products/on-sale'),
-  addProductRating: (id, ratingData) => new API().post(`/products/${id}/ratings`, ratingData)
+	getProducts: (params = {}) => {
+		const queryParams = new URLSearchParams();
+		Object.entries(params).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				queryParams.append(key, value);
+			}
+		});
+		return new API().get(`/products?${queryParams.toString()}`);
+	},
+	getProductById: (id) => new API().get(`/products/${id}`),
+	getFeaturedProducts: () => new API().get('/products/featured'),
+	getProductsOnSale: () => new API().get('/products/on-sale'),
+	addProductRating: (id, ratingData) => new API().post(`/products/${id}/ratings`, ratingData)
 };
 
 // Category API Service
