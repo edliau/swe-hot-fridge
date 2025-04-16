@@ -143,7 +143,7 @@
     <div class="text-center text-gray-500">
       <p>You haven't added any favourites yet.</p>
       <p class="mt-2">
-        <a href="/" class="text-pink-500 hover:underline">Browse products</a> and click the heart icon to add to your favourites.
+        <a href="/" class="text-pink-500 hover:underline">Browse products</a> and click the star icon to add to your favourites.
       </p>
     </div>
   {/if}
