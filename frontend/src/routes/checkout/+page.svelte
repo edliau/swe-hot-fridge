@@ -95,42 +95,55 @@
     cleanup();
   });
   
-  async function loadUserData() {
+    async function loadUserData() {
     try {
       console.log("Loading user data, user:", user);
       
-      // Fetch user data with populated addresses
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      
-      const result = await response.json();
-      console.log("User data received:", result);
-      
-      // If user has addresses, populate the addresses array
-      if (result.data.addresses && result.data.addresses.length > 0) {
-        addresses = result.data.addresses;
-        console.log("Addresses loaded:", addresses);
+      // Fetch addresses
+      if (user._id) {
+        const addressResponse = await fetch(`${import.meta.env.VITE_API_URL}/addresses/users/${user._id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         
-        // Select default address if exists
-        const defaultAddress = addresses.find(addr => addr.isDefault);
-        selectedAddress = defaultAddress || addresses[0];
-      } else {
-        console.log("No addresses found for user");
+        if (addressResponse.ok) {
+          const addressResult = await addressResponse.json();
+          console.log("Addresses loaded:", addressResult);
+          
+          if (addressResult.success && addressResult.data && addressResult.data.length > 0) {
+            addresses = addressResult.data;
+            
+            // Select default address if exists
+            const defaultAddress = addresses.find(addr => addr.isDefault);
+            selectedAddress = defaultAddress || addresses[0];
+          } else {
+            console.log("No addresses found for user or error fetching addresses");
+          }
+        } else {
+          console.error("Failed to fetch addresses:", await addressResponse.text());
+        }
       }
       
       // Fetch payment methods
       if (user.paymentMethods && user.paymentMethods.length > 0) {
-        paymentMethods = user.paymentMethods;
-        // Select default payment method if exists
-        const defaultPayment = paymentMethods.find(pm => pm.isDefault);
-        selectedPaymentMethod = defaultPayment || paymentMethods[0];
+        const paymentResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/payment`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (paymentResponse.ok) {
+          const paymentResult = await paymentResponse.json();
+          
+          if (paymentResult.success && paymentResult.data) {
+            paymentMethods = paymentResult.data;
+            
+            // Select default payment method if exists
+            const defaultPayment = paymentMethods.find(pm => pm.isDefault);
+            selectedPaymentMethod = defaultPayment || paymentMethods[0];
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
